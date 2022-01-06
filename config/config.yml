@@ -1,0 +1,31 @@
+#mysql配置
+mysqlConfig:
+  #主机地址
+  host: 'localhost'
+  #端口
+  port: 3306
+  #用户
+  user: 'shencoder'
+  #密码
+  password: '123456'
+  #数据库名称
+  database: 'srs_rtc'
+
+#网络请求相关配置
+apiConfig:
+  #http端口
+  httpPort: 9898
+  #https端口
+  httpsPort: 9899
+
+#socket.io相关配置-信令服务器端口
+socketIoConfig:
+  #http端口
+  httpPort: 9998
+  #https端口
+  httpsPort: 9999
+
+#ssl证书相关存放路径
+ssl:
+  keyPath: './cert/server.key'
+  pemPath: './cert/server.pem'

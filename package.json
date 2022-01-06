@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.2",
-    "mysql": "^2.18.1"
+    "mysql": "^2.18.1",
+    "yaml": "^1.10.2"
   }
 }
