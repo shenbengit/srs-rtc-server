@@ -64,7 +64,7 @@ app.post(USER_PATH.CHECK_USER_ID, function (req, res) {
     if (userId) {
         getUserByUserId(userId).then(result => {
             if (result.length) {
-                res.json(new ErrorModel(0, "userId: " + userId + ", already exists."));
+                res.json(new ErrorModel(0, "userId [" + userId + "] already exists."));
             } else {
                 res.json(new SuccessModel());
             }
@@ -83,11 +83,16 @@ app.get(USER_PATH.GET_USER_BY_USER_ID, function (req, res) {
     if (userId) {
         getUserByUserId(userId).then(result => {
             if (result.length) {
-                res.json(new ErrorModel(0, "userId: " + userId + ", already exists."));
+                if (result.length === 1) {
+                    //仅存在一条数据
+                    res.json(new SuccessModel(result[0]));
+                } else {
+                    //存在多条数据
+                    res.json(new ErrorModel(2, "userId [" + userId + "] data.length: " + result.length));
+                }
             } else {
-                res.json(new SuccessModel());
+                res.json(new ErrorModel(0, "userId [" + userId + "] don't exists."));
             }
-            res.json(new SuccessModel(result));
         }).catch(error => {
             //数据库操作异常
             res.json(DBErrorModel(error));
@@ -122,7 +127,12 @@ app.post(USER_PATH.UPDATE_USER, function (req, res) {
     if (userId) {
         if (username || password) {
             updateUser(userId, username, password).then(result => {
-                res.json(new SuccessModel());
+                if (result.affectedRows) {
+                    //影响行数
+                    res.json(new SuccessModel());
+                } else {
+                    res.json(new ErrorModel(0, "userId [" + userId + "] don't exists."));
+                }
             }).catch(error => {
                 //数据库操作异常
                 res.json(DBErrorModel(error));
