@@ -1,4 +1,4 @@
-const CODE_SUCCESS = 1
+const CODE_SUCCESS = 200
 const MSG_SUCCESS = "success"
 /**
  * 数据库相关错误码
@@ -50,6 +50,11 @@ class BodyMissingErrorModel extends ErrorModel {
         super(null, "RequestBody is missing : [" + paramName + "].");
     }
 }
+class HeaderMissingErrorModel extends ErrorModel {
+    constructor(paramName) {
+        super(null, "Missing header [" + paramName + "] for method parameter.");
+    }
+}
 
 
 const DBErrorModel = (error) => {
@@ -65,5 +70,6 @@ module.exports = {
     ErrorModel,
     ParamMissingErrorModel,
     BodyMissingErrorModel,
+    HeaderMissingErrorModel,
     DBErrorModel
 }

@@ -19,7 +19,9 @@ const connection = mysql.createConnection({
  */
 function execSql(sql) {
     return new Promise(function (resolve, reject) {
-        console.log("execSql: " + sql)
+        console.info("execSql---------------------------------------------------------------------------------->")
+        console.info("execSql: " + sql)
+        console.info("execSql---------------------------------------------------------------------------------->")
         connection.query(sql, (error, result) => {
             if (error) {
                 console.error("execSql:  " + sql + ",error: ", error)
