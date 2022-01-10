@@ -36,7 +36,8 @@ const {
     getUserByUserId,
     verifyUserInfo,
     insertUser,
-    updateUser
+    updateUser,
+    deleteUser
 } = require('./user');
 const {USER_PATH} = require("../constant/apiConstant");
 
@@ -83,7 +84,7 @@ app.get(USER_PATH.GET_ALL_USER_INFO, function (req, res) {
                         });
                     } else {
                         //管理员用户不存在
-                        res.json(new ErrorModel(-1, `admin user id : [${userId}] doesn't exists.`));
+                        res.json(new ErrorModel(-1, `admin: user_id[${userId}] doesn't exists.`));
                     }
                 }).catch(error => {
                     //数据库操作异常
@@ -162,7 +163,7 @@ app.get(USER_PATH.GET_USER_INFO, function (req, res) {
                     res.json(new ErrorModel(0, `userId: [${userId}] and userType: [${userType}] data.length: ${result.length}.`));
                 }
             } else {
-                res.json(new ErrorModel(0, `userId: [${userId}] and userType: [${userType}] doesn't exists.`));
+                res.json(new ErrorModel(0, `user info: userId[${userId}] and userType[${userType}] doesn't exists.`));
             }
         }).catch(error => {
             //数据库操作异常
@@ -226,7 +227,7 @@ app.post(USER_PATH.UPDATE_USER, function (req, res) {
                     //影响行数
                     res.json(new SuccessModel());
                 } else {
-                    res.json(new ErrorModel(0, `userId: [${userId}] and userType: [${userType}] doesn't exists.`));
+                    res.json(new ErrorModel(0, `user info: userId[${userId}] and userType[${userType}] doesn't exists.`));
                 }
             }).catch(error => {
                 //数据库操作异常
@@ -281,7 +282,36 @@ app.post(USER_PATH.USER_LOGIN, function (req, res) {
         res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
     }
 })
-
+//删除用户
+app.post(USER_PATH.DELETE_USER, function (req, res) {
+    const userId = req.body.userId;
+    let userType = req.body.userType;
+    if (!userId) {
+        res.status(400).json(new ParamMissingErrorModel("userId"));
+        return
+    }
+    if (!userType) {
+        res.status(400).json(new ParamMissingErrorModel("userType"));
+        return
+    }
+    userType = userType.toString();
+    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+        deleteUser(userId, userType).then(result => {
+            console.log("delete： ",result)
+            if (result.affectedRows) {
+                res.json(new SuccessModel());
+            } else {
+                res.json(new ErrorModel(0, `user info: userId[${userId}] and userType[${userType}] doesn't exists.`));
+            }
+        }).catch(error => {
+            //数据库操作异常
+            res.json(DBErrorModel(error));
+        });
+    } else {
+        //用户类型错误
+        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+    }
+})
 
 /**
  * 启动api服务

@@ -89,6 +89,20 @@ const updateUser = (userId, username, password, userType) => {
     return execSql(sql);
 }
 
+/**
+ * 删除用户
+ * @param userId
+ * @param userType
+ * @returns {Promise<*>}
+ */
+const deleteUser = (userId, userType) => {
+    const sql = `DELETE
+                 FROM db_user
+                 WHERE user_id = '${userId}'
+                   AND user_type = '${userType}'`
+    return execSql(sql);
+}
+
 module.exports = {
     USER_TYPE_CLIENT,
     USER_TYPE_ADMIN,
@@ -96,5 +110,6 @@ module.exports = {
     getUserByUserId,
     verifyUserInfo,
     insertUser,
-    updateUser
+    updateUser,
+    deleteUser
 }

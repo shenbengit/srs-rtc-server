@@ -62,7 +62,17 @@ const USER_PATH = {
      response:
      {"code":1,"msg":"success","data":{"id": 13,"userId": "123","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}}
      */
-    USER_LOGIN: BASE_PATH + "/user/userLogin"
+    USER_LOGIN: BASE_PATH + "/user/userLogin",
+    /*
+     删除用户
+     POST
+     /srs_rtc/user/deleteUser
+     body:
+     {"userId":"123","userType":"0"}
+     response:
+     {"code":1,"msg":"success"}
+     */
+    DELETE_USER: BASE_PATH + "/user/deleteUser",
 };
 
 module.exports = {
