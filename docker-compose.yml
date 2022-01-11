@@ -14,4 +14,10 @@ services:
       #./config/config.yml--socketIoConfig.httpPort
       - "9999:9999"
     volumes:
-      - .:/home/public/srs-rtc-server/
+      - ./cert:/home/public/srs-rtc-server/cert
+      - ./config:/home/public/srs-rtc-server/config
+      - ./srs:/home/public/srs-rtc-server/srs
+      - ./app.js:/home/public/srs-rtc-server/app.js
+      - ./package.json:/home/public/srs-rtc-server/package.json
+      - ./package-lock.json:/home/public/srs-rtc-server/package-lock.json
+      - ./yarn.lock:/home/public/srs-rtc-server/yarn.lock
