@@ -29,7 +29,7 @@ const getAllUser = (userType) => {
  * @param userId 用户id
  * @param userType
  */
-const getUserByUserId = (userId, userType) => {
+const getUserInfo = (userId, userType) => {
     const sql = `SELECT id, user_id as userId, user_type as userType, username, created_at as createdAt
                  FROM db_user
                  WHERE user_id = '${userId}'
@@ -107,7 +107,7 @@ module.exports = {
     USER_TYPE_CLIENT,
     USER_TYPE_ADMIN,
     getAllUser,
-    getUserByUserId,
+    getUserInfo,
     verifyUserInfo,
     insertUser,
     updateUser,

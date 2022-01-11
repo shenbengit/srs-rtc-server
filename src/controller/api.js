@@ -33,7 +33,7 @@ const {
     USER_TYPE_CLIENT,
     USER_TYPE_ADMIN,
     getAllUser,
-    getUserByUserId,
+    getUserInfo,
     verifyUserInfo,
     insertUser,
     updateUser,
@@ -73,7 +73,7 @@ app.get(USER_PATH.GET_ALL_USER_INFO, function (req, res) {
             const userId = req.header(HEADER_USER_ID)
             if (userId) {
                 //判断用户id真实性
-                getUserByUserId(userId, userType).then(result => {
+                getUserInfo(userId, userType).then(result => {
                     if (result.length) {
                         //人员存在
                         getAllUser(userType).then(result => {
@@ -123,7 +123,7 @@ app.post(USER_PATH.CHECK_USER_ID, function (req, res) {
     }
     userType = userType.toString();
     if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
-        getUserByUserId(userId, userType).then(result => {
+        getUserInfo(userId, userType).then(result => {
             if (result.length) {
                 res.json(new ErrorModel(0, `userId: [${userId}] and userType: [${userType}] already exists.`));
             } else {
@@ -153,7 +153,7 @@ app.get(USER_PATH.GET_USER_INFO, function (req, res) {
     }
     userType = userType.toString();
     if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
-        getUserByUserId(userId, userType).then(result => {
+        getUserInfo(userId, userType).then(result => {
             if (result.length) {
                 if (result.length === 1) {
                     //仅存在一条数据

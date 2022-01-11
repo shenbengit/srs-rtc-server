@@ -10,6 +10,15 @@ const sslOptions = {
     key: fs.readFileSync(config.ssl.keyPath),
     cert: fs.readFileSync(config.ssl.pemPath)
 };
+
+const {
+    USER_TYPE_CLIENT,
+    USER_TYPE_ADMIN,
+    getUserInfo,
+} = require('./user');
+
+const {SuccessModel, ErrorModel} = require("../model/responseModel");
+
 const socketIoConfig = config.socketIoConfig;
 
 const httpServer = require('http').createServer(app);
@@ -27,9 +36,32 @@ ioServer.attach(httpsServer)
 const socketServer = ioServer.of("/srs_rtc/signal")
 //连接
 socketServer.on("connection", function (socket) {
-    let query = socket.handshake.query;
+    const query = socket.handshake.query;
+    const userId = query.userId;
+    const userType = query.userType;
+    if (!userId || !userType) {
 
-    console.log("socket connection" , query.userId,query.userType)
+        return
+    }
+    //验证身份
+    getUserInfo(userId, userType).then(result => {
+        if (result.length) {
+            if (result.length === 1) {
+                //仅存在一条数据
+
+            } else {
+                //存在多条数据
+               aaa()
+            }
+        } else {
+            //不存在数据
+        }
+    }).catch(error => {
+        //数据库连接失败
+
+    });
+
+    console.log("socket connection", query.userId, query.userType)
 })
 
 
