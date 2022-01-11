@@ -7,16 +7,18 @@ services:
     build: .
     #自启
     restart: always
+    #主机模式  network_mode: host 与 ports不兼容
+    network_mode: host
     #端口
-    ports:
+    #ports:
       #./config/config.yml--apiConfig.httpPort
-      - "9898:9898"
+      #- "9898:9898"
       #./config/config.yml--apiConfig.httpsPort
-      - "9899:9899"
+      #- "9899:9899"
       #./config/config.yml--socketIoConfig.httpPort
-      - "9998:9998"
+      #- "9998:9998"
       #./config/config.yml--socketIoConfig.httpPort
-      - "9999:9999"
+      #- "9999:9999"
     #挂载本地文件
     volumes:
       - ./cert:/home/public/srs-rtc-server/cert
