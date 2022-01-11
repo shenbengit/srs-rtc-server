@@ -5,7 +5,7 @@ mysqlConfig:
   #端口
   port: 3306
   #用户
-  user: 'shencoder'
+  user: 'srs_rtc'
   #密码
   password: '123456'
   #数据库名称
