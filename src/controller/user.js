@@ -8,7 +8,7 @@ const USER_TYPE_CLIENT = "0";
  * 用户类型：管理员
  * @type {string}
  */
-const USER_TYPE_ADMIN = "1";
+const USER_TYPE_ADMINISTRATOR = "1";
 
 /**
  * 获取所有用户信息
@@ -16,7 +16,7 @@ const USER_TYPE_ADMIN = "1";
 const getAllUser = (userType) => {
     let sql = `SELECT id, user_id as userId, user_type as userType, username, created_at as createdAt
                FROM db_user`;
-    if (userType !== USER_TYPE_ADMIN) {
+    if (userType !== USER_TYPE_ADMINISTRATOR) {
         //不是管理员权限
         sql += ` WHERE user_type = '${userType}'`
     }
@@ -105,7 +105,7 @@ const deleteUser = (userId, userType) => {
 
 module.exports = {
     USER_TYPE_CLIENT,
-    USER_TYPE_ADMIN,
+    USER_TYPE_ADMINISTRATOR,
     getAllUser,
     getUserInfo,
     verifyUserInfo,

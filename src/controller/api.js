@@ -31,7 +31,7 @@ app.use(Express.urlencoded({extended: false}));
 
 const {
     USER_TYPE_CLIENT,
-    USER_TYPE_ADMIN,
+    USER_TYPE_ADMINISTRATOR,
     getAllUser,
     getUserInfo,
     verifyUserInfo,
@@ -67,8 +67,8 @@ app.get(USER_PATH.GET_ALL_USER_INFO, function (req, res) {
     //未设置则指定类型为客户端
     const userType = (req.header(HEADER_USER_TYPE) || USER_TYPE_CLIENT);
 
-    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
-        if (userType === USER_TYPE_ADMIN) {
+    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
+        if (userType === USER_TYPE_ADMINISTRATOR) {
             //如果是管理员账户，还需要用户id
             const userId = req.header(HEADER_USER_ID)
             if (userId) {
@@ -104,7 +104,7 @@ app.get(USER_PATH.GET_ALL_USER_INFO, function (req, res) {
         });
     } else {
         //用户类型错误
-        res.json(new ErrorModel(0, `header [${HEADER_USER_TYPE}] value:[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+        res.json(new ErrorModel(0, `header [${HEADER_USER_TYPE}] value:[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
 });
 
@@ -122,7 +122,7 @@ app.post(USER_PATH.CHECK_USER_ID, function (req, res) {
         return;
     }
     userType = userType.toString();
-    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
         getUserInfo(userId, userType).then(result => {
             if (result.length) {
                 res.json(new ErrorModel(0, `userId: [${userId}] and userType: [${userType}] already exists.`));
@@ -135,7 +135,7 @@ app.post(USER_PATH.CHECK_USER_ID, function (req, res) {
         });
     } else {
         //用户类型错误
-        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
 })
 
@@ -152,7 +152,7 @@ app.get(USER_PATH.GET_USER_INFO, function (req, res) {
         return
     }
     userType = userType.toString();
-    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
         getUserInfo(userId, userType).then(result => {
             if (result.length) {
                 if (result.length === 1) {
@@ -171,7 +171,7 @@ app.get(USER_PATH.GET_USER_INFO, function (req, res) {
         });
     } else {
         //用户类型错误
-        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
 })
 
@@ -183,7 +183,7 @@ app.post(USER_PATH.INSERT_USER, function (req, res) {
     let userType = req.body.userType;
     if (userId && username && password && userType) {
         userType = userType.toString();
-        if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+        if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
             insertUser(userId, username, password, userType).then(result => {
                 if (result.affectedRows === 1) {
                     // const insertId = result.insertId;
@@ -198,7 +198,7 @@ app.post(USER_PATH.INSERT_USER, function (req, res) {
             });
         } else {
             //用户类型错误
-            res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+            res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
         }
     } else {
         res.status(400).json(new BodyMissingErrorModel("userId,username,password,userType"));
@@ -221,7 +221,7 @@ app.post(USER_PATH.UPDATE_USER, function (req, res) {
     }
     userType = userType.toString();
     if (username || password) {
-        if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+        if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
             updateUser(userId, username, password, userType).then(result => {
                 if (result.affectedRows) {
                     //影响行数
@@ -235,7 +235,7 @@ app.post(USER_PATH.UPDATE_USER, function (req, res) {
             });
         } else {
             //用户类型错误
-            res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+            res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
         }
     } else {
         res.status(400).json(new BodyMissingErrorModel("username OR password"));
@@ -260,7 +260,7 @@ app.post(USER_PATH.USER_LOGIN, function (req, res) {
         return
     }
     userType = userType.toString();
-    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
         verifyUserInfo(userId, userType, password).then(result => {
             if (result.length) {
                 if (result.length === 1) {
@@ -279,7 +279,7 @@ app.post(USER_PATH.USER_LOGIN, function (req, res) {
         });
     } else {
         //用户类型错误
-        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
 })
 //删除用户
@@ -295,7 +295,7 @@ app.post(USER_PATH.DELETE_USER, function (req, res) {
         return
     }
     userType = userType.toString();
-    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMIN) {
+    if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
         deleteUser(userId, userType).then(result => {
             console.log("delete： ",result)
             if (result.affectedRows) {
@@ -309,7 +309,7 @@ app.post(USER_PATH.DELETE_USER, function (req, res) {
         });
     } else {
         //用户类型错误
-        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMIN}].`));
+        res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
 })
 
