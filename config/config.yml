@@ -29,3 +29,6 @@ socketIoConfig:
 ssl:
   keyPath: './cert/server.key'
   pemPath: './cert/server.pem'
+
+#一个房间内最大客户端数量
+maxSizeOfRoom: 9
