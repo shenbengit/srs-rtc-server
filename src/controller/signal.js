@@ -2,36 +2,38 @@
  * 房间号前缀
  * @type {string}
  */
-const ROOM_PREFIX = "srs_rtc_"
-/**
- * 所有客户端加入的房间名称
- * @type {string}
- */
-const CLIENTS_ROOM = "clients_room";
-/**
- * 所有管理终端加入的房间名称
- * @type {string}
- */
-const ADMINISTRATORS_ROOM = "administrators_room";
-
+const ROOM_PREFIX = "srs_rtc_call_room_"
 /**
  * 通话状态
  */
 const CALL_STATUS = {
     /**
      * 空闲状态
-     *
      */
-    IDLE: 1, /**
+    IDLE: 1,
+    /**
      * 拨号中状态
      */
-    DIALING: 2, /**
+    DIALING: 2,
+    /**
      * 通话中状态
      */
     CALLING: 3
 };
-
-
+/**
+ * 一些公共部分请求事件
+ */
+const REQ_CMD = {};
+/**
+ * 一个公共部分的通知事件
+ * @type {{}}
+ */
+const NOTIFY_CMD = {
+    /**
+     * 单点登录：强制下线
+     */
+    NOTIFY_FORCED_OFFLINE: "notify_forced_offline",
+};
 /**
  * 管理端请求事件
  * @type {{}}
@@ -51,14 +53,10 @@ const ADMINISTRATORS_NOTIFY_CMD = {
      * 通知管理员用户，有客户端下线
      */
     NOTIFY_CLIENT_OFFLINE: "notify_client_offline",
-    /**
-     * 单点登录：强制下线
-     */
-    NOTIFY_FORCED_OFFLINE: "notify_forced_offline",
 };
 /**
  * 客户端请求事件
- * @type {{}}
+ * @type {{REQ_REJECT_CALL: string, REQ_INVITE_SOMEONE_JOIN_ROOM: string, REQ_PUBLISH_STREAM: string, REQ_JOIN_CHAT_ROOM: string, REQ_LEAVE_CHAT_ROOM: string, REQ_HANG_UP: string, REQ_ACCEPT_CALL: string, REQ_INVITE_SOME_PEOPLE_JOIN_ROOM: string, REQ_INVITE_SOMEONE: string, REQ_INVITE_SOME_PEOPLE: string}}
  */
 const CLIENT_REQ_CMD = {
     /**
@@ -86,6 +84,14 @@ const CLIENT_REQ_CMD = {
      */
     REQ_ACCEPT_CALL: "req_accept_call",
     /**
+     * 加入房间->用于聊天室
+     */
+    REQ_JOIN_CHAT_ROOM: "req_join_chat_room",
+    /**
+     * 离开房间->用于聊天室
+     */
+    REQ_LEAVE_CHAT_ROOM: "req_leave_chat_room",
+    /**
      * 请求推流
      */
     REQ_PUBLISH_STREAM: "req_publish_stream",
@@ -99,10 +105,6 @@ const CLIENT_REQ_CMD = {
  * @type {{}}
  */
 const CLIENT_NOTIFY_CMD = {
-    /**
-     * 单点登录：强制下线
-     */
-    NOTIFY_FORCED_OFFLINE: "notify_forced_offline",
     /**
      * 通知请求通话
      */
@@ -124,6 +126,14 @@ const CLIENT_NOTIFY_CMD = {
      */
     NOTIFY_ACCEPT_CALL: "notify_accept_call",
     /**
+     * 通知有人加入房间->用于聊天室
+     */
+    NOTIFY_JOIN_CHAT_ROOM: "notify_join_chat_room",
+    /**
+     * 通知有人离开房间->用于聊天室
+     */
+    NOTIFY_LEAVE_CHAT_ROOM: "notify_leave_chat_room",
+    /**
      * 通知拉流
      */
     NOTIFY_PLAY_STREAM: "notify_play_stream",
@@ -132,20 +142,14 @@ const CLIENT_NOTIFY_CMD = {
      */
     NOTIFY_HANG_UP: "notify_hang_up",
     /**
-     * 通知有人加入房间
+     * 通知房间内，有人通话中掉线
      */
-    NOTIFY_JOIN_ROOM: "notify_join_room",
-    /**
-     * 通知有人离开房间
-     */
-    NOTIFY_LEAVE_ROOM: "notify_leave_room",
-    /**
-     * 通知通话结束，仅作用于在房间内的人
-     */
-    NOTIFY_CALL_ENDED: "notify_call_ended"
+    NOTIFY_OFFLINE_DURING_CALL: "notify_offline_during_call",
 };
 
 const {Server} = require("socket.io");
+const {Room, SocketId} = require("socket.io-adapter");
+
 const fs = require("fs");
 const Express = require("express");
 const app = new Express()
@@ -169,7 +173,6 @@ const {
 } = require('./user');
 
 const {SuccessModel, ErrorModel} = require("../model/responseModel");
-const {BroadcastOperator} = require("socket.io/dist/broadcast-operator");
 
 const socketIoConfig = config.socketIoConfig;
 
@@ -210,7 +213,7 @@ function socketAuthentication(socket, next, userType, namespace) {
                 if (singleSignOnSocket) {
                     //说明之前有同账号登录过
                     //发送强制下线通知
-                    singleSignOnSocket.emit(ADMINISTRATORS_NOTIFY_CMD.NOTIFY_FORCED_OFFLINE);
+                    singleSignOnSocket.emit(NOTIFY_CMD.NOTIFY_FORCED_OFFLINE);
                     //强制断开socket
                     singleSignOnSocket.disconnect(false);
                 }
@@ -259,6 +262,24 @@ const clientNamespace = ioServer.of("/srs_rtc/signal/client")
         socketAuthentication(socket, next, USER_TYPE_CLIENT, clientNamespace);
     });
 
+clientNamespace.adapter
+    //创建房间时调用
+    .on("create-room", (room) => {
+        console.log(`clientNamespace.adapter.create-room->roomId:${room}`)
+    })
+    //socket进入房间时调用
+    .on("join-room", (room, socketId) => {
+        console.log(`clientNamespace.adapter.join-room->roomId:${room},socketId: ${socketId}`)
+    })
+    //socket离开房间时调用
+    .on("leave-room", (room, socketId) => {
+        console.log(`clientNamespace.adapter.leave-room->roomId:${room},socketId: ${socketId}`)
+    })
+    //在所有socket离开房间时调用
+    .on("delete-room", (room) => {
+        console.log(`clientNamespace.adapter.delete-room->roomId:${room}`)
+    });
+
 //管理端连接
 administratorNamespace.on("connection", function (socket) {
     setSocketCallStatus(socket, CALL_STATUS.IDLE)
@@ -279,13 +300,6 @@ administratorNamespace.on("connection", function (socket) {
 
 //客户端连接
 clientNamespace.on("connection", function (socket) {
-    socket.join("123")
-    console.log("所有房间1：", clientNamespace.adapter.rooms)
-    console.log("所有房间2：", clientNamespace.adapter.sids)
-    console.log("所有房间3：", getAllRoom(clientNamespace, true))
-    console.log("所有房间4：", getAllRoom(clientNamespace, false))
-    console.log("会见房间：", getSocketCallRoom(socket))
-
     //通知管理终端有客户端上线
     administratorNamespace.emit(ADMINISTRATORS_NOTIFY_CMD.NOTIFY_CLIENT_ONLINE, socket.userInfo);
 
@@ -322,10 +336,22 @@ clientNamespace.on("connection", function (socket) {
             //roomId="123456"
             clientAcceptCall(socket, roomId, fn);
         })
+        //加入房间->用于聊天室
+        .on(CLIENT_REQ_CMD.REQ_JOIN_CHAT_ROOM, (roomId, fn) => {
+            //roomId="123456"
+            clientJoinChatRoom(socket, roomId, fn);
+        })
+        //离开房间->用于聊天室
+        .on(CLIENT_REQ_CMD.REQ_LEAVE_CHAT_ROOM, (roomId, fn) => {
+            //roomId="123456"
+            clientLeaveChatRoom(socket, roomId, fn);
+        })
+        //推流
         .on(CLIENT_REQ_CMD.REQ_PUBLISH_STREAM, (info, fn) => {
-            //info={roomId:"123", publishStreamUrl: "webrtc://192.168.2.186:1990/live/livestream"}
+            //info={roomId:"123", publishStreamUrl: "webrtc://192.168.1.1:1990/live/livestream"}
             clientPublishStream(socket, info, fn);
         })
+        //挂断
         .on(CLIENT_REQ_CMD.REQ_HANG_UP, (roomId, fn) => {
             //roomId="123456"
             clientHangUp(socket, roomId, fn)
@@ -336,15 +362,11 @@ clientNamespace.on("connection", function (socket) {
         })
         //在客户端将要断开连接时触发（但尚未离开rooms）
         .on("disconnecting", (reason) => {
-
+            clientDisconnecting(socket, reason);
         })
         //断开连接时触发
         .on("disconnect", () => {
-            console.log("disconnect:", socket.id);
-            setSocketCallStatus(socket, CALL_STATUS.IDLE);
-
-            //通知管理终端有客户端下线
-            administratorNamespace.emit(ADMINISTRATORS_NOTIFY_CMD.NOTIFY_CLIENT_OFFLINE, socket.userInfo)
+            clientDisconnect(socket)
         });
 });
 
@@ -390,18 +412,21 @@ function clientInviteSomeone(inviteSocket, userInfo, needCreateRoom, fn) {
         if (inviteeClient) {
             //在线，判断是否是空闲状态
             if (isSocketIdle(inviteeClient)) {
-                let success = clientJoinRoom(inviteSocket, roomId, false);
-                if (!success) {
-                    //加入房间失败
-                    fn(new ErrorModel(0, "invite join room failed, exceeded maximum quantity limit."));
-                    return
+                let success;
+                if (needCreateRoom) {
+                    success = clientJoinRoom(inviteSocket, roomId);
+                    if (!success) {
+                        //加入房间失败
+                        fn(new ErrorModel(0, "invite join room failed: exceeded maximum quantity limit."));
+                        return
+                    }
                 }
                 //将受邀者直接进入房间
-                success = clientJoinRoom(inviteeClient, roomId, false);
+                success = clientJoinRoom(inviteeClient, roomId);
                 if (!success) {
                     //受邀人没有加入房间
-                    clientLeaveRoom(inviteSocket, roomId, false);
-                    fn(new ErrorModel(0, "invitee join room failed, exceeded maximum quantity limit."));
+                    clientLeaveRoom(inviteSocket, roomId);
+                    fn(new ErrorModel(0, "invitee join room failed: exceeded maximum quantity limit."));
                     return
                 }
                 //通知被邀请者，推送请求通话
@@ -417,6 +442,10 @@ function clientInviteSomeone(inviteSocket, userInfo, needCreateRoom, fn) {
                     })
                 }
             } else {
+                if (isSocketInRoom(inviteeClient, roomId)) {
+                    fn(new ErrorModel(0, "the invitee is already in the room."));
+                    return;
+                }
                 //被邀请人忙碌
                 fn(new ErrorModel(0, "the invitee is busy."));
             }
@@ -460,7 +489,9 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
         //忙碌列表
         const busyList = [];
         //离线或不存在列表
-        const offlineOrNotExists = [];
+        const offlineOrNotExistsList = [];
+        //已经在房间列表，属于无效邀请
+        const alreadyInRoomList = [];
 
         for (const userInfo of list) {
             //设置用户类型
@@ -470,25 +501,32 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
                 if (isSocketIdle(inviteeClient)) {
                     callSocketList.push(inviteeClient);
                 } else {
+                    if (isSocketInRoom(inviteeClient, roomId)) {
+                        //已经存在房间
+                        alreadyInRoomList.push(inviteeClient.userInfo);
+                        return;
+                    }
                     busyList.push(inviteeClient.userInfo);
                 }
             } else {
                 delete userInfo.userType
-                offlineOrNotExists.push(userInfo)
+                offlineOrNotExistsList.push(userInfo)
             }
         }
         //判断可通话列表是否为空，如果为空，则没有通话意义。
         if (callSocketList.length !== 0) {
-            const success = clientJoinRoom(inviteSocket, roomId, false);
-            if (!success) {
-                //加入房间失败
-                fn(new ErrorModel(0, "join room failed, exceeded maximum quantity limit."));
-                return;
+            if (needCreateRoom) {
+                const success = clientJoinRoom(inviteSocket, roomId);
+                if (!success) {
+                    //加入房间失败
+                    fn(new ErrorModel(0, "join room failed: exceeded maximum quantity limit."));
+                    return;
+                }
             }
             const callList = [];
             const newSocketList = [];
             for (const socket of callSocketList) {
-                if (!clientJoinRoom(socket, roomId, false)) {
+                if (!clientJoinRoom(socket, roomId)) {
                     break;
                 }
                 callList.push(socket.userInfo);
@@ -496,8 +534,8 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
             }
 
             if (callList.length === 0) {
-                clientLeaveRoom(inviteSocket, roomId, false);
-                fn(new ErrorModel(0, "invitee join room failed, exceeded maximum quantity limit."))
+                clientLeaveRoom(inviteSocket, roomId);
+                fn(new ErrorModel(0, "invitee join room failed: exceeded maximum quantity limit."))
                 return;
             }
             const inviteeData = {inviteInfo: inviteSocket.userInfo, callList: callList, roomId: roomId};
@@ -508,7 +546,11 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
             });
 
             const data = {
-                callList: callList, busyList: busyList, offlineOrNotExists: offlineOrNotExists, roomId: roomId
+                /*可通话人员列表*/
+                callList: callList, /*忙碌人员列表*/
+                busyList: busyList, /*离线或不存在列表列表*/
+                offlineOrNotExistsList: offlineOrNotExistsList, /*已经在房间内列表，属于无效邀请*/
+                alreadyInRoomList: alreadyInRoomList, roomId: roomId
             };
             fn(new SuccessModel(data));
 
@@ -534,19 +576,20 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
  * 客户端加入房间
  * @param socket
  * @param roomId
- * @param needNotify 是否需要通知房间内其他人
  * @returns {boolean} true：加入成功，false：加入失败
  */
-function clientJoinRoom(socket, roomId, needNotify) {
+function clientJoinRoom(socket, roomId) {
+    if (!isSocketIdle(socket)) {
+        //当前状态忙碌
+        return false;
+    }
+    if (isSocketInRoom(socket, roomId)) {
+        //已经在会见室
+        return false;
+    }
     if (canRoomAddSocket(clientNamespace, roomId)) {
         socket.join(roomId);
         setSocketCallStatus(socket, CALL_STATUS.DIALING);
-
-        //是否需要通知
-        if (needNotify) {
-            //像房间内其他人发送进入房间消息
-            socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_JOIN_ROOM, {userInfo: socket.userInfo, roomId: roomId});
-        }
         return true;
     }
     return false;
@@ -556,15 +599,11 @@ function clientJoinRoom(socket, roomId, needNotify) {
  * 客户端离开房间
  * @param socket
  * @param roomId
- * @param needNotify 是否需要通知房间内其他客户端
  */
-function clientLeaveRoom(socket, roomId, needNotify) {
+function clientLeaveRoom(socket, roomId) {
     if (isSocketInRoom(socket, roomId)) {
         socket.leave(roomId);
         setSocketCallStatus(socket, CALL_STATUS.IDLE);
-        if (needNotify) {
-
-        }
         return true;
     }
     return false;
@@ -581,15 +620,16 @@ function clientRejectCall(socket, roomId, fn) {
         fn(new ErrorModel(0, "roomId is null."));
         return
     }
-    if (clientLeaveRoom(socket, roomId, false)) {
+    if (clientLeaveRoom(socket, roomId)) {
         fn(new SuccessModel());
 
         const socketIds = getRoomSocketIds(clientNamespace, roomId);
-        if (socketIds.size === 0) {
+        if (!socketIds.length) {
+            //房间里没人了
             return;
         }
         //房间内剩余客户端数量为1，则直接关闭会话
-        const needCallEnded = socketIds.size === 1;
+        const needCallEnded = socketIds.length === 1;
         //推送拒接通知
         socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_REJECT_CALL, {
             userInfo: socket.userInfo, roomId: roomId, /*是否需要结束通话*/callEnded: needCallEnded
@@ -597,7 +637,7 @@ function clientRejectCall(socket, roomId, fn) {
         if (needCallEnded) {
             const client = clientNamespace.sockets.get(socketIds[0]);
             //结束通话
-            clientLeaveRoom(client, roomId, false);
+            clientLeaveRoom(client, roomId);
         }
     } else {
         fn(new ErrorModel(0, "client reject call failed: you are not in the room."));
@@ -617,24 +657,70 @@ function clientAcceptCall(socket, roomId, fn) {
     }
     if (isSocketInRoom(socket, roomId)) {
         const socketIds = getRoomSocketIds(clientNamespace, roomId);
-        if (socketIds.size === 1 && socket.id === socketIds[0]) {
-            clientLeaveRoom(socket, roomId, false);
+        if (socketIds.length === 1) {
+            //如果数量为1，说明就只有自己
+            clientLeaveRoom(socket, roomId);
             fn(new ErrorModel(-1, "call room doesn't exist."));
             return;
         }
         socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_ACCEPT_CALL, {userInfo: socket.userInfo, roomId: roomId});
-        //已经存在的推流信息
-        const streamList = [];
-        socketIds.forEach(id => {
-            const client = clientNamespace.sockets.get(id);
-            //通话中状态且有推流信息
-            if (client.callStatus === CALL_STATUS.CALLING && client.publishStreamUrl) {
-                streamList.push({userInfo: client.userInfo, publishStreamUrl: client.publishStreamUrl})
-            }
-        });
-        fn(new SuccessModel(streamList));
+        fn(new SuccessModel({streamList: getPublishStreamInRoom(clientNamespace, roomId), roomId: roomId}));
     } else {
         fn(new ErrorModel(0, "client accept call failed: you are not in the room."));
+    }
+}
+
+/**
+ * 客户端加入聊天室
+ * @param socket
+ * @param roomId
+ * @param fn
+ */
+function clientJoinChatRoom(socket, roomId, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    //校验房间号，防止误入房间号是自动生成的房间
+    if (roomId.startsWith(ROOM_PREFIX)) {
+        fn(new ErrorModel(0, "roomId is invalid."));
+        return;
+    }
+    if (isSocketIdle(socket)) {
+        if (isSocketInRoom(socket, roomId)) {
+            fn(new ErrorModel(0, "you are already in the room."));
+            return;
+        }
+        if (clientJoinRoom(socket, roomId)) {
+            socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_JOIN_CHAT_ROOM, {
+                userInfo: socket.userInfo, roomId: roomId
+            });
+            fn(new SuccessModel({streamList: getPublishStreamInRoom(clientNamespace, roomId), roomId: roomId}));
+        } else {
+            fn(new ErrorModel(0, "join chat room failed: exceeded maximum quantity limit."));
+        }
+    } else {
+        fn(new ErrorModel(0, "you are busy."));
+    }
+}
+
+/**
+ * 客户端离开聊天室
+ * @param socket
+ * @param roomId
+ * @param fn
+ */
+function clientLeaveChatRoom(socket, roomId, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (clientLeaveRoom(socket, roomId)) {
+        fn(new SuccessModel());
+        //通知房间内其他人
+        socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_LEAVE_CHAT_ROOM, {userInfo: socket.userInfo, roomId: roomId});
+    } else {
+        fn(new ErrorModel(0, "client leave chat room failed: you are not in the room."));
     }
 }
 
@@ -658,10 +744,13 @@ function clientPublishStream(socket, info, fn) {
     if (isSocketInRoom(socket, roomId)) {
         //通知房间内其他客户端拉流
         socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_PLAY_STREAM, {
-            userInfo: socket.userInfo,
-            publishStreamUrl: publishStreamUrl,
-            roomId: roomId
+            userInfo: socket.userInfo, publishStreamUrl: publishStreamUrl, roomId: roomId
         });
+        //保存推流地址
+        setSocketPublishStreamUrl(socket, publishStreamUrl);
+        //更新通话状态为通话中
+        setSocketCallStatus(socket, CALL_STATUS.CALLING);
+
         fn(new SuccessModel());
     } else {
         fn(new ErrorModel(0, "client publish stream failed: you are not in the room."));
@@ -679,16 +768,16 @@ function clientHangUp(socket, roomId, fn) {
         fn(new ErrorModel(0, "roomId is null."));
         return
     }
-    if (clientLeaveRoom(socket, roomId, false)) {
+    if (clientLeaveRoom(socket, roomId)) {
         fn(new SuccessModel());
 
         const socketIds = getRoomSocketIds(clientNamespace, roomId);
-        if (socketIds.size === 0) {
+        if (!socketIds.length) {
             //房间里没人了
             return;
         }
         //房间内剩余客户端数量为1，则直接关闭会话
-        const needCallEnded = socketIds.size === 1;
+        const needCallEnded = socketIds.length === 1;
         //推送挂断通知
         socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_HANG_UP, {
             userInfo: socket.userInfo, roomId: roomId, /*是否需要结束通话*/callEnded: needCallEnded
@@ -696,13 +785,40 @@ function clientHangUp(socket, roomId, fn) {
         if (needCallEnded) {
             const client = clientNamespace.sockets.get(socketIds[0]);
             //结束通话
-            clientLeaveRoom(client, roomId, false);
+            clientLeaveRoom(client, roomId);
         }
     } else {
         fn(new ErrorModel(0, "client hang up failed: you are not in the room."));
     }
 }
 
+/**
+ * 客户端断开连接中，此时并没有离开房间
+ * @param socket
+ * @param reason
+ */
+function clientDisconnecting(socket, reason) {
+    //如果是通话中离线，则通知房间内其他人
+    if (!isSocketIdle(socket)) {
+        const roomId = getSocketCallRoom(socket);
+        if (roomId) {
+            //通知房间内其他人，有人离开离线
+            socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_OFFLINE_DURING_CALL, {
+                userInfo: socket.userInfo, reason: reason, roomId: roomId
+            });
+        }
+    }
+}
+
+/**
+ * 客户端断开连接
+ * @param socket
+ */
+function clientDisconnect(socket) {
+    setSocketCallStatus(socket, CALL_STATUS.IDLE);
+    //通知管理终端有客户端下线
+    administratorNamespace.emit(ADMINISTRATORS_NOTIFY_CMD.NOTIFY_CLIENT_OFFLINE, socket.userInfo)
+}
 
 /**
  * 判断客户端是否在指定房间内
@@ -743,11 +859,11 @@ const setSocketCallStatus = (socket, status) => {
 /**
  * 获取客户端当前正在会见的房间
  * @param socket
+ * @return {undefined|Room}
  */
 const getSocketCallRoom = (socket) => {
     const rooms = socket.rooms;
-    const tempRooms = new Set([...rooms].filter(roomId => roomId !== socket.id));
-    const realRooms = [...tempRooms];
+    const realRooms = [...rooms].filter(roomId => roomId !== socket.id);
     if (realRooms.length) {
         if (realRooms.length === 1) {
             return realRooms[0];
@@ -769,6 +885,28 @@ const setSocketPublishStreamUrl = (socket, streamUrl) => {
     //当前客户端推流地址
     socket.publishStreamUrl = streamUrl;
 }
+
+/**
+ * 获取房间内已经存在的流
+ *
+ * @param namespace
+ * @param roomId
+ * @return {*[]}
+ */
+const getPublishStreamInRoom = (namespace, roomId) => {
+    const socketIds = getRoomSocketIds(namespace, roomId);
+    //已经存在的推流信息
+    const streamList = [];
+    socketIds.forEach(socketId => {
+        const client = clientNamespace.sockets.get(socketId);
+        //通话中状态且有推流信息
+        if (client && client.callStatus === CALL_STATUS.CALLING && client.publishStreamUrl) {
+            streamList.push({userInfo: client.userInfo, publishStreamUrl: client.publishStreamUrl})
+        }
+    });
+    return streamList;
+}
+
 /**
  * 判断房间是否可以继续添加socket
  * @param namespace
@@ -777,17 +915,19 @@ const setSocketPublishStreamUrl = (socket, streamUrl) => {
  */
 const canRoomAddSocket = (namespace, roomId) => {
     const socketIds = getRoomSocketIds(namespace, roomId)
-    return !socketIds || socketIds.size < MAX_CLIENTS_IN_ROOM;
+    return socketIds.length < MAX_CLIENTS_IN_ROOM;
 }
 
 /**
- *
+ * 获取房间内所有socketId
  * @param namespace
  * @param roomId
- * @returns {Set<String>}
+ * @return {*[]}
  */
 const getRoomSocketIds = (namespace, roomId) => {
-    return namespace.adapter.rooms.get(roomId);
+    const rooms = namespace.adapter.rooms.get(roomId) || new Set();
+    //将set 转成 array
+    return [...rooms];
 }
 
 /**
