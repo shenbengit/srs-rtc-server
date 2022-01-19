@@ -3,6 +3,11 @@
  * @type {string}
  */
 const ROOM_PREFIX = "srs_rtc_call_room_"
+const NAMESPACE = {
+    ADMINISTRATORS: "/srs_rtc/signal/administrator",
+    CLIENT: "/srs_rtc/signal/client",
+};
+
 /**
  * 通话状态
  */
@@ -243,7 +248,7 @@ function socketAuthentication(socket, next, userType, namespace) {
  * http://ip:port/srs_rtc/signal/administrator?userId=xxx
  * https://ip:port/srs_rtc/signal/administrator?userId=xxx
  */
-const administratorNamespace = ioServer.of("/srs_rtc/signal/administrator")
+const administratorNamespace = ioServer.of(NAMESPACE.ADMINISTRATORS)
     .use((socket, next) => {
         //校验管理员信息
         socketAuthentication(socket, next, USER_TYPE_ADMINISTRATOR, administratorNamespace);
@@ -256,7 +261,7 @@ const administratorNamespace = ioServer.of("/srs_rtc/signal/administrator")
  * http://ip:port/srs_rtc/signal/client?userId=xxx
  * https://ip:port/srs_rtc/signal/client?userId=xxx
  */
-const clientNamespace = ioServer.of("/srs_rtc/signal/client")
+const clientNamespace = ioServer.of(NAMESPACE.CLIENT)
     .use((socket, next) => {
         //校验客户端信息
         socketAuthentication(socket, next, USER_TYPE_CLIENT, clientNamespace);
