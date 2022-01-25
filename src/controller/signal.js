@@ -73,7 +73,7 @@ const CLIENT_REQ_CMD = {
      */
     REQ_INVITE_SOME_PEOPLE: "req_invite_some_people",
     /**
-     * 邀请一个人进入邀请人房间——> 单聊
+     * 邀请一个人进入邀请人房间——> 群聊
      */
     REQ_INVITE_SOMEONE_JOIN_ROOM: "req_invite_someone_join_room",
     /**
@@ -321,7 +321,7 @@ clientNamespace.on("connection", function (socket) {
             //list=[{userId:"123"}]
             clientInviteSomePeople(socket, list, true, fn);
         })
-        //邀请一个人进入邀请人房间——> 单聊
+        //邀请一个人进入邀请人房间——> 群聊
         .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE_JOIN_ROOM, (userInfo, fn) => {
             //userInfo={userId:"123"}
             clientInviteSomeone(socket, userInfo, false, fn);
