@@ -551,11 +551,11 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
             });
 
             const data = {
-                /*可通话人员列表*/
-                callList: callList, /*忙碌人员列表*/
-                busyList: busyList, /*离线或不存在列表列表*/
-                offlineOrNotExistsList: offlineOrNotExistsList, /*已经在房间内列表，属于无效邀请*/
-                alreadyInRoomList: alreadyInRoomList, roomId: roomId
+                /*可通话人员列表*/callList: callList,
+                /*忙碌人员列表*/busyList: busyList,
+                /*离线或不存在列表列表*/offlineOrNotExistsList: offlineOrNotExistsList,
+                /*已经在房间内列表，属于无效邀请*/alreadyInRoomList: alreadyInRoomList,
+                /*房间号*/roomId: roomId
             };
             fn(new SuccessModel(data));
 
