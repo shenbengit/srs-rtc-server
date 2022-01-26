@@ -312,24 +312,24 @@ clientNamespace.on("connection", function (socket) {
 
     socket
         //邀请一个人，并创建房间 ——> 单聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE, (userInfo, fn) => {
-            //userInfo={userId:"123"}
-            clientInviteSomeone(socket, userInfo, true, fn);
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE, (info, fn) => {
+            //info={userId:"123"}
+            clientInviteSomeone(socket, info, true, fn);
         })
         //邀请一些人，并创建房间 ——> 群聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE, (list, fn) => {
-            //list=[{userId:"123"}]
-            clientInviteSomePeople(socket, list, true, fn);
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE, (info, fn) => {
+            //list={userList:[{userId:"123"}]}
+            clientInviteSomePeople(socket, info, true, fn);
         })
         //邀请一个人进入邀请人房间——> 群聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE_JOIN_ROOM, (userInfo, fn) => {
-            //userInfo={userId:"123"}
-            clientInviteSomeone(socket, userInfo, false, fn);
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE_JOIN_ROOM, (info, fn) => {
+            //info={userId:"123",roomId:123}
+            clientInviteSomeone(socket, info, false, fn);
         })
         //邀请一些人进入邀请人房间 ——> 群聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE_JOIN_ROOM, (list, fn) => {
-            //list=[{userId:"123"}]
-            clientInviteSomePeople(socket, list, false, fn);
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE_JOIN_ROOM, (info, fn) => {
+            //info={userList:[{userId:"123"}],roomId:123}
+            clientInviteSomePeople(socket, info, false, fn);
         })
         //拒接
         .on(CLIENT_REQ_CMD.REQ_REJECT_CALL, (roomId, fn) => {
@@ -393,26 +393,30 @@ function getSocketByUserInfo(namespace, userInfo) {
 /**
  * 客户端邀请某人
  * @param inviteSocket
- * @param userInfo
+ * @param info
  * @param needCreateRoom 是否需要创建房间，如果为false，则指定为当前邀请人的房间号
  * @param fn
  */
-function clientInviteSomeone(inviteSocket, userInfo, needCreateRoom, fn) {
+function clientInviteSomeone(inviteSocket, info, needCreateRoom, fn) {
     let roomId;
     if (needCreateRoom) {
         roomId = generateRoomId();
     } else {
-        roomId = getSocketCallRoom(inviteSocket);
+        roomId = info.roomId;
         if (!roomId) {
             fn(new ErrorModel(0, "no call room exists."));
+            return;
+        }
+        if (!isSocketInRoom(inviteSocket, roomId)) {
+            fn(new ErrorModel(0, "you are not in the room."));
             return;
         }
     }
     //先判断本身是否是空闲状态
     if (!needCreateRoom || isSocketIdle(inviteSocket)) {
         //设置用户类型
-        userInfo.userType = USER_TYPE_CLIENT;
-        const inviteeClient = getSocketByUserInfo(clientNamespace, userInfo);
+        info.userType = USER_TYPE_CLIENT;
+        const inviteeClient = getSocketByUserInfo(clientNamespace, info);
         //先判断被邀请人是否在线
         if (inviteeClient) {
             //在线，判断是否是空闲状态
@@ -429,8 +433,10 @@ function clientInviteSomeone(inviteSocket, userInfo, needCreateRoom, fn) {
                 //将受邀者直接进入房间
                 success = clientJoinRoom(inviteeClient, roomId);
                 if (!success) {
-                    //受邀人没有加入房间
-                    clientLeaveRoom(inviteSocket, roomId);
+                    if (needCreateRoom) {
+                        //受邀人没有加入房间，自己也离开房间
+                        clientLeaveRoom(inviteSocket, roomId);
+                    }
                     fn(new ErrorModel(0, "invitee join room failed: exceeded maximum quantity limit."));
                     return
                 }
@@ -466,21 +472,27 @@ function clientInviteSomeone(inviteSocket, userInfo, needCreateRoom, fn) {
 /**
  * 客户端邀请某人
  * @param inviteSocket
- * @param list
+ * @param info
  * @param needCreateRoom 是否需要创建房间，如果为false，则指定为当前邀请人的房间号
  * @param fn
  */
-function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
+function clientInviteSomePeople(inviteSocket, info, needCreateRoom, fn) {
     let roomId;
     if (needCreateRoom) {
         roomId = generateRoomId();
     } else {
-        roomId = getSocketCallRoom(inviteSocket);
+        roomId = info.roomId;
         if (!roomId) {
             fn(new ErrorModel(0, "no call room exists."));
             return;
         }
+        if (!isSocketInRoom(inviteSocket, roomId)) {
+            fn(new ErrorModel(0, "you are not in the room."));
+            return;
+        }
     }
+
+    const list = info.userList;
 
     //先判断本身是否是空闲状态
     if (!needCreateRoom || isSocketIdle(inviteSocket)) {
@@ -538,8 +550,11 @@ function clientInviteSomePeople(inviteSocket, list, needCreateRoom, fn) {
                 newSocketList.push(socket);
             }
 
-            if (callList.length === 0) {
-                clientLeaveRoom(inviteSocket, roomId);
+            if (callList.length === 0 || newSocketList.length === 0) {
+                if (needCreateRoom) {
+                    //需要创建房间时，呼叫列表为空，则自己也离开房间
+                    clientLeaveRoom(inviteSocket, roomId);
+                }
                 fn(new ErrorModel(0, "invitee join room failed: exceeded maximum quantity limit."))
                 return;
             }
