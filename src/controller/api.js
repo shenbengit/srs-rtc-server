@@ -318,10 +318,10 @@ app.post(USER_PATH.DELETE_USER, function (req, res) {
  */
 function startApiServer() {
     httpApiServer.listen(apiConfig.httpPort, function () {
-        console.log("HttpApiServer listen: " + apiConfig.httpPort);
+        console.log("ApiHttpServer listen: " + apiConfig.httpPort);
     });
     httpsApiServer.listen(apiConfig.httpsPort, function () {
-        console.log("HttpsApiServer listen: " + apiConfig.httpsPort);
+        console.log("ApiHttpsServer listen: " + apiConfig.httpsPort);
     });
 }
 

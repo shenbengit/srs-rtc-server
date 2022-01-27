@@ -558,9 +558,11 @@ function clientInviteSomePeople(inviteSocket, info, needCreateRoom, fn) {
                 fn(new ErrorModel(0, "invitee join room failed: exceeded maximum quantity limit."))
                 return;
             }
-            const inviteeData = {inviteInfo: inviteSocket.userInfo, callList: callList, roomId: roomId};
 
             newSocketList.forEach(socket => {
+                //排除掉自己之前的其他人员
+                const newCallList = callList.filter((value => value !== socket.userInfo));
+                const inviteeData = {inviteInfo: inviteSocket.userInfo, callList: newCallList, roomId: roomId};
                 //通知被邀请者，推送请求通话
                 socket.emit(CLIENT_NOTIFY_CMD.NOTIFY_REQUEST_CALL, inviteeData);
             });
@@ -575,6 +577,7 @@ function clientInviteSomePeople(inviteSocket, info, needCreateRoom, fn) {
             fn(new SuccessModel(data));
 
             if (!needCreateRoom) {
+                const inviteeData = {inviteInfo: inviteSocket.userInfo, inviteeInfoList: callList, roomId: roomId};
                 //不是创建房间，而是加入邀请人房间，则通知房间内其他人
                 let operator = inviteSocket.to(roomId);
                 newSocketList.forEach(socket => {
@@ -822,10 +825,26 @@ function clientDisconnecting(socket, reason) {
     if (!isSocketIdle(socket)) {
         const roomId = getSocketCallRoom(socket);
         if (roomId) {
+            const socketIds = getRoomSocketIds(clientNamespace, roomId);
+            const otherSocketIds = socketIds.filter(value => value !== socket.id);
+            //房间内其他人数量小于等于1时
+            const needCallEnded = otherSocketIds.length <= 1;
             //通知房间内其他人，有人离开离线
             socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_OFFLINE_DURING_CALL, {
-                userInfo: socket.userInfo, reason: reason, roomId: roomId
-            });
+                    userInfo: socket.userInfo,
+                    reason: reason,
+                    roomId: roomId,
+                    /*是否需要结束通话*/callEnded: needCallEnded
+                }
+            );
+            if (needCallEnded) {
+                if (otherSocketIds.length === 1) {
+                    //让剩下的那一个socket离开房间
+                    const client = clientNamespace.sockets.get(otherSocketIds[0]);
+                    //结束通话
+                    clientLeaveRoom(client, roomId);
+                }
+            }
         }
     }
 }
