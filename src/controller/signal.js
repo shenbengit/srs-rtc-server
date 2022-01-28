@@ -687,7 +687,10 @@ function clientAcceptCall(socket, roomId, fn) {
             return;
         }
         socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_ACCEPT_CALL, {userInfo: socket.userInfo, roomId: roomId});
-        fn(new SuccessModel({streamList: getPublishStreamInRoom(clientNamespace, roomId), roomId: roomId}));
+        fn(new SuccessModel({
+            alreadyInRoomList: getAllSocketInfoExcept(clientNamespace, roomId, socket),
+            roomId: roomId
+        }));
     } else {
         fn(new ErrorModel(0, "client accept call failed: you are not in the room."));
     }
@@ -715,10 +718,16 @@ function clientJoinChatRoom(socket, roomId, fn) {
             return;
         }
         if (clientJoinRoom(socket, roomId)) {
+            //设置聊天模式时聊天室
+            setSocketChatRoomMode(socket, true);
+
             socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_JOIN_CHAT_ROOM, {
                 userInfo: socket.userInfo, roomId: roomId
             });
-            fn(new SuccessModel({streamList: getPublishStreamInRoom(clientNamespace, roomId), roomId: roomId}));
+            fn(new SuccessModel({
+                alreadyInRoomList: getAllSocketInfoExcept(clientNamespace, roomId, socket),
+                roomId: roomId
+            }));
         } else {
             fn(new ErrorModel(0, "join chat room failed: exceeded maximum quantity limit."));
         }
@@ -765,14 +774,12 @@ function clientPublishStream(socket, info, fn) {
         return
     }
     if (isSocketInRoom(socket, roomId)) {
+        //保存推流地址
+        setSocketPublishStreamUrl(socket, publishStreamUrl);
         //通知房间内其他客户端拉流
         socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_PLAY_STREAM, {
             userInfo: socket.userInfo, publishStreamUrl: publishStreamUrl, roomId: roomId
         });
-        //保存推流地址
-        setSocketPublishStreamUrl(socket, publishStreamUrl);
-        //更新通话状态为通话中
-        setSocketCallStatus(socket, CALL_STATUS.CALLING);
 
         fn(new SuccessModel());
     } else {
@@ -825,24 +832,33 @@ function clientDisconnecting(socket, reason) {
     if (!isSocketIdle(socket)) {
         const roomId = getSocketCallRoom(socket);
         if (roomId) {
-            const socketIds = getRoomSocketIds(clientNamespace, roomId);
-            const otherSocketIds = socketIds.filter(value => value !== socket.id);
-            //房间内其他人数量小于等于1时
-            const needCallEnded = otherSocketIds.length <= 1;
-            //通知房间内其他人，有人离开离线
-            socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_OFFLINE_DURING_CALL, {
+            if (socket.isChatRoomMode) {
+                //聊天室模式，直接通知有人离开聊天室
+                socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_LEAVE_CHAT_ROOM, {
                     userInfo: socket.userInfo,
-                    reason: reason,
-                    roomId: roomId,
-                    /*是否需要结束通话*/callEnded: needCallEnded
-                }
-            );
-            if (needCallEnded) {
-                if (otherSocketIds.length === 1) {
-                    //让剩下的那一个socket离开房间
-                    const client = clientNamespace.sockets.get(otherSocketIds[0]);
-                    //结束通话
-                    clientLeaveRoom(client, roomId);
+                    roomId: roomId
+                });
+            } else {
+                //普通聊天，私聊或者群聊
+                const socketIds = getRoomSocketIds(clientNamespace, roomId);
+                const otherSocketIds = socketIds.filter(value => value !== socket.id);
+                //房间内其他人数量小于等于1时
+                const needCallEnded = otherSocketIds.length <= 1;
+                //通知房间内其他人，有人离开离线
+                socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_OFFLINE_DURING_CALL, {
+                        userInfo: socket.userInfo,
+                        reason: reason,
+                        roomId: roomId,
+                        /*是否需要结束通话*/callEnded: needCallEnded
+                    }
+                );
+                if (needCallEnded) {
+                    if (otherSocketIds.length === 1) {
+                        //让剩下的那一个socket离开房间
+                        const client = clientNamespace.sockets.get(otherSocketIds[0]);
+                        //结束通话
+                        clientLeaveRoom(client, roomId);
+                    }
                 }
             }
         }
@@ -866,7 +882,7 @@ function clientDisconnect(socket) {
  * @returns {boolean}
  */
 const isSocketInRoom = (socket, roomId) => {
-    return socket.rooms.contains(roomId);
+    return socket.rooms.has(roomId);
 }
 
 /**
@@ -892,9 +908,35 @@ const isSocketIdle = (socket) => {
 const setSocketCallStatus = (socket, status) => {
     if (status === CALL_STATUS.IDLE) {
         setSocketPublishStreamUrl(socket, undefined);
+        setSocketChatRoomMode(false)
     }
     socket.callStatus = status;
 }
+
+/**
+ * 设置socket当前推流地址
+ * @param socket
+ * @param streamUrl
+ */
+const setSocketPublishStreamUrl = (socket, streamUrl) => {
+    //当前客户端推流地址
+    socket.publishStreamUrl = streamUrl;
+    if (streamUrl) {
+        //更新通话状态为通话中
+        setSocketCallStatus(socket, CALL_STATUS.CALLING);
+    }
+}
+
+/**
+ * 设置socket当前聊天方式是否是聊天室
+ * @param socket
+ * @param isChatRoomMode
+ */
+const setSocketChatRoomMode = (socket, isChatRoomMode) => {
+    //当前客户端聊天室模式
+    socket.isChatRoomMode = isChatRoomMode;
+}
+
 /**
  * 获取客户端当前正在会见的房间
  * @param socket
@@ -916,16 +958,6 @@ const getSocketCallRoom = (socket) => {
 }
 
 /**
- * 设置socket当前推流地址
- * @param socket
- * @param streamUrl
- */
-const setSocketPublishStreamUrl = (socket, streamUrl) => {
-    //当前客户端推流地址
-    socket.publishStreamUrl = streamUrl;
-}
-
-/**
  * 获取房间内已经存在的流
  *
  * @param namespace
@@ -937,13 +969,31 @@ const getPublishStreamInRoom = (namespace, roomId) => {
     //已经存在的推流信息
     const streamList = [];
     socketIds.forEach(socketId => {
-        const client = clientNamespace.sockets.get(socketId);
+        const client = namespace.sockets.get(socketId);
         //通话中状态且有推流信息
         if (client && client.callStatus === CALL_STATUS.CALLING && client.publishStreamUrl) {
             streamList.push({userInfo: client.userInfo, publishStreamUrl: client.publishStreamUrl})
         }
     });
     return streamList;
+}
+/**
+ * 获取房间内所有客户端信息，排除某个客户端
+ * @param namespace
+ * @param roomId
+ * @param exceptSocket
+ * @return {*[]}
+ */
+const getAllSocketInfoExcept = (namespace, roomId, exceptSocket) => {
+    const socketIds = getRoomSocketIds(namespace, roomId);
+    const list = [];
+    socketIds.forEach(socketId => {
+        if (socketId !== exceptSocket.id) {
+            const client = namespace.sockets.get(socketId);
+            list.push({userInfo: client.userInfo, publishStreamUrl: client.publishStreamUrl})
+        }
+    });
+    return list;
 }
 
 /**
