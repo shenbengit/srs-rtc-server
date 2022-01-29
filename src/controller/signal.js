@@ -31,7 +31,6 @@ const CALL_STATUS = {
 const REQ_CMD = {};
 /**
  * 一个公共部分的通知事件
- * @type {{}}
  */
 const NOTIFY_CMD = {
     /**
@@ -47,7 +46,6 @@ const ADMINISTRATORS_REQ_CMD = {};
 
 /**
  * 管理员通知事件
- * @type {{}}
  */
 const ADMINISTRATORS_NOTIFY_CMD = {
     /**
@@ -61,7 +59,6 @@ const ADMINISTRATORS_NOTIFY_CMD = {
 };
 /**
  * 客户端请求事件
- * @type {{REQ_REJECT_CALL: string, REQ_INVITE_SOMEONE_JOIN_ROOM: string, REQ_PUBLISH_STREAM: string, REQ_JOIN_CHAT_ROOM: string, REQ_LEAVE_CHAT_ROOM: string, REQ_HANG_UP: string, REQ_ACCEPT_CALL: string, REQ_INVITE_SOME_PEOPLE_JOIN_ROOM: string, REQ_INVITE_SOMEONE: string, REQ_INVITE_SOME_PEOPLE: string}}
  */
 const CLIENT_REQ_CMD = {
     /**
@@ -104,10 +101,13 @@ const CLIENT_REQ_CMD = {
      * 挂断
      */
     REQ_HANG_UP: "req_hang_up",
+    /**
+     * 用于重置状态，避免偶发情况下未关闭通话
+     */
+    REQ_RESET_STATUS: "req_reset_status"
 };
 /**
  * 客户端通知事件
- * @type {{}}
  */
 const CLIENT_NOTIFY_CMD = {
     /**
@@ -360,6 +360,9 @@ clientNamespace.on("connection", function (socket) {
         .on(CLIENT_REQ_CMD.REQ_HANG_UP, (roomId, fn) => {
             //roomId="123456"
             clientHangUp(socket, roomId, fn)
+        })
+        .on(CLIENT_REQ_CMD.REQ_RESET_STATUS, () => {
+            clientResetStatus(socket);
         })
         //发生错误时触发
         .on("error", (error) => {
@@ -823,6 +826,23 @@ function clientHangUp(socket, roomId, fn) {
 }
 
 /**
+ * 重置客户端状态
+ * @param socket
+ */
+function clientResetStatus(socket) {
+    if (!isSocketIdle(socket)) {
+        const roomId = getSocketCallRoom(socket);
+        if (roomId) {
+            if (socket.isChatRoomMode) {
+                clientLeaveChatRoom(socket, roomId, empty);
+            } else {
+                clientHangUp(socket, roomId, empty)
+            }
+        }
+    }
+}
+
+/**
  * 客户端断开连接中，此时并没有离开房间
  * @param socket
  * @param reason
@@ -1038,6 +1058,13 @@ function getAllRoom(namespace, excludeSocket) {
         allRoom.set(key, value);
     })
     return allRoom;
+}
+
+/**
+ * 空方法，无意义
+ * @param result
+ */
+function empty(result) {
 }
 
 /**
