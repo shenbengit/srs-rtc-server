@@ -1,4 +1,4 @@
-#mysql配置
+#mysql配置-必须修改项-Item must be modified.
 mysqlConfig:
   #主机地址
   host: 'localhost'
