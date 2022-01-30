@@ -16,7 +16,36 @@
 
 ## 目录结构
 ```
-asd
+.srs-rtc-server
+├── app.js --服务启动入口
+├── cert --SSL证书相关文件
+│   ├── server.key
+│   └── server.pem
+├── config -配置文件目录
+│   └── config.yml -配置文件
+├── db --数据库文件目录
+│   └── srs_rtc.sql --sql文件
+├── docker-build-cmd.txt --创建docker镜像命令，弃用。
+├── docker-compose.yml --docker-compose.yml
+├── Dockerfile --Dockerfile
+├── package.json --package.json
+├── package-lock.json --package-lock.json
+├── README.md --README.md
+├── src --源码
+│   ├── config 
+│   │   └── config.js --读取config.yml配置文件
+│   ├── constant
+│   │   └── apiConstant.js --Api请求相关常量
+│   ├── controller
+│   │   ├── api.js --api接口服务相关
+│   │   ├── signal.js --信令服务相关
+│   │   └── user.js --封装的一些操作用户数据库相关方法
+│   ├── db
+│   │   └── mysql.js --数据库连接工具类
+│   └── model
+│       └── responseModel.js --请求返回公共基类
+└── yarn.lock --yarn.lock
+
 ```
 
 ## Getting Started
