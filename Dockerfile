@@ -19,4 +19,4 @@ EXPOSE 9998
 #./config/config.yml--socketIoConfig.httpsPort
 EXPOSE 9999
 
-CMD ["node","start"]
+CMD ["npm","start"]
