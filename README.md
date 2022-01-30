@@ -115,7 +115,7 @@ SignalHttpsServer listen: 9999
 打印上面这个日志，表示成功启动。
 
 ## 文档
-### Api接口文档
+### Api接口文档（支持http、https）
 用户注册、登录、信息查询等接口；    
 [在线文档](https://www.eolink.com/share/index?shareCode=NN6pDm)
 
