@@ -7,9 +7,13 @@ WORKDIR /home/public/srs-rtc-server
 #复制指令，从上下文目录中复制文件或者目录到容器里指定路径。
 COPY . /home/public/srs-rtc-server
 
+#设置容器时区
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo 'Asia/Shanghai' >/etc/timezone
+
 RUN npm install 
 
-# PORT
+# PORT 使用到的端口，配置文件中如有调整，同步修改
 #./config/config.yml--apiConfig.httpPort
 EXPOSE 9898
 #./config/config.yml--apiConfig.httpsPort
