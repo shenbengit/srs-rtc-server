@@ -35,13 +35,14 @@
 │   ├── config 
 │   │   └── config.js --读取config.yml配置文件
 │   ├── constant
-│   │   └── apiConstant.js --Api请求相关常量
+│   │   ├── apiConstant.js --Api服务相关常量
+│   │   └── signalConstant.js --信令服务相关常量
 │   ├── controller
 │   │   ├── api.js --api接口服务相关
 │   │   ├── signal.js --信令服务相关
 │   │   └── user.js --封装的一些操作用户数据库相关方法
 │   ├── db
-│   │   └── mysql.js --数据库连接工具类
+│   │   └── mysql.js --数据库连接、查询工具类
 │   └── model
 │       └── responseModel.js --请求返回公共基类
 └── yarn.lock --yarn.lock
