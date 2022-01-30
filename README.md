@@ -47,7 +47,9 @@ yarn
 yarn start
 ```
 #### Docker
-安装**docker-compose**.
+1. 安装**docker-compose**.
+2. 如果[config.yml](https://github.com/shenbengit/srs-rtc-server/blob/master/config/config.yml)中端口有调整，请同步调整[Dockerfile](https://github.com/shenbengit/srs-rtc-server/blob/master/Dockerfile)中对应的端口。
+
 
 ```shell
 cd srs-rtc-server
