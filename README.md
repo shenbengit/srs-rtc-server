@@ -1,5 +1,5 @@
 # srs-rtc-server
-基于SRS视频服务器实现简易音视频通话系统——信令服务器
+基于[SRS](https://github.com/ossrs/srs)视频服务器实现简易音视频通话系统——信令服务器
 
 ## 前言
 一个基于Node.js、MySQL、Socket.io等实现的具有用户注册、角色管理、音视频通话管理的信令服务器。
@@ -57,6 +57,8 @@
 
 ### 配置Mysql
 将[srs_rtc.sql](https://github.com/shenbengit/srs-rtc-server/blob/master/db/srs_rtc.sql)导入MySQL中。
+### 部署SRS
+部署步骤详见[SRS-Wiki](https://github.com/ossrs/srs/wiki/v4_CN_Home#getting-started)，启用WebRTC。
 
 ### 配置文件修改
 - 修改[config.yml](https://github.com/shenbengit/srs-rtc-server/blob/master/config/config.yml)中的配置文件；    
@@ -116,3 +118,24 @@ SignalHttpsServer listen: 9999
 ### Api接口文档
 用户注册、登录、信息查询等接口；    
 [在线文档](https://www.eolink.com/share/index?shareCode=NN6pDm)
+
+### 信令文档
+#### 管理员（开发中...）
+- 连接地址：
+```
+ws://ip:port/srs_rtc/signal/administrator?userId=xxx
+wss://ip:port/srs_rtc/signal/administrator?userId=xxx
+http://ip:port/srs_rtc/signal/administrator?userId=xxx
+https://ip:port/srs_rtc/signal/administrator?userId=xxx
+```
+
+#### 客户端
+- 连接地址：
+```
+ws://ip:port/srs_rtc/signal/client?userId=xxx
+wss://ip:port/srs_rtc/signal/client?userId=xxx
+http://ip:port/srs_rtc/signal/client?userId=xxx
+https://ip:port/srs_rtc/signal/client?userId=xxx
+```
+
+## [LICENSE](https://github.com/shenbengit/srs-rtc-server/blob/master/LICENSE)
