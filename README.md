@@ -70,7 +70,7 @@
 ```shell
 npm install
 
-node start
+npm start
 ```
 #### Yarn
 ```shell
