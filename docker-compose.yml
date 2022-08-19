@@ -8,17 +8,17 @@ services:
     #自启
     restart: always
     #主机模式  network_mode: host 与 ports不兼容
-    network_mode: host
+    # network_mode: host
     #端口
-    #ports:
+    ports:
       #./config/config.yml--apiConfig.httpPort
-      #- "9898:9898"
+      - "9898:9898"
       #./config/config.yml--apiConfig.httpsPort
-      #- "9899:9899"
+      - "9899:9899"
       #./config/config.yml--socketIoConfig.httpPort
-      #- "9998:9998"
+      - "9998:9998"
       #./config/config.yml--socketIoConfig.httpPort
-      #- "9999:9999"
+      - "9999:9999"
     #挂载本地文件
     volumes:
       - ./cert:/home/public/srs-rtc-server/cert
@@ -28,3 +28,53 @@ services:
       - ./package.json:/home/public/srs-rtc-server/package.json
       - ./package-lock.json:/home/public/srs-rtc-server/package-lock.json
       - ./yarn.lock:/home/public/srs-rtc-server/yarn.lock
+    depends_on:
+      - mysqldb
+      - srs
+
+  mysqldb:
+    image: mysql:5.7
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_ROOT_PASSWORD: 123456
+      ## you can connect to database using below command:
+      ## docker exec -it srs-rtc-server-mysqldb-1 mysql -usrs_rtc -Dsrs_rtc -p
+      MYSQL_USER: srs_rtc
+      MYSQL_PASSWORD: 123456
+      MYSQL_DATABASE: srs_rtc
+    volumes:
+      - "./db/srs_rtc.sql:/docker-entrypoint-initdb.d/1.sql"
+
+  srs:
+    image: registry.cn-hangzhou.aliyuncs.com/ossrs/srs:4
+    restart: always
+    command: bash -c "/usr/local/srs/objs/srs -c /usr/local/srs/conf/rtc.conf"
+    ports:
+      - 1935:1935
+      - 8080:8080
+      - 1985:1985
+      - 8000:8000/udp
+    # volumes:
+    #   - ./config/rtc.conf:/usr/local/srs/conf/rtc.conf
+    environment:
+      CANDIDATE: ${CANDIDATE}
+
+  httpx:
+    image: registry.cn-hangzhou.aliyuncs.com/ossrs/httpx:1
+    restart: always
+    command: 
+      - /bin/sh
+      - -c
+      - |
+        ./bin/httpx-static -https 1990 -ssk ./etc/server.key -ssc ./etc/server.crt -proxy http://$CANDIDATE:1985/rtc -proxy http://$CANDIDATE:8080/
+    ports:
+      - 1990:1990
+    environment:
+      CANDIDATE: ${CANDIDATE}
+    depends_on:
+      - srs
+
+

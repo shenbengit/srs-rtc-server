@@ -1,7 +1,7 @@
 #mysql配置-必须修改项-Item must be modified.
 mysqlConfig:
   #主机地址
-  host: 'localhost'
+  host: 'mysqldb'
   #端口
   port: 3306
   #用户
