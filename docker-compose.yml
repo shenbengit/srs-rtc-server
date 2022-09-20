@@ -76,5 +76,19 @@ services:
       CANDIDATE: ${CANDIDATE}
     depends_on:
       - srs
+  nginx:
+    image: nginx:latest
+    restart: always
+    command: 
+      - nginx -c /etc/nginx.conf
+    ports:
+      - 8080:8080
+      - 8081:8081
+    environment:
+      CANDIDATE: ${CANDIDATE}
+    depends_on:
+      - srs
+    volumes:
+      - "./nginx.conf:/etc/conf.conf"
 
 
