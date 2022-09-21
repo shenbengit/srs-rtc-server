@@ -1,0 +1,34 @@
+#mysql配置-必须修改项-Item must be modified.
+mysqlConfig:
+  #主机地址
+  host: 'mysqldb'
+  #端口
+  port: 3306
+  #用户
+  user: 'srs_rtc'
+  #密码
+  password: '123456'
+  #数据库名称
+  database: 'srs_rtc'
+
+#网络请求相关配置
+apiConfig:
+  #http端口
+  httpPort: 29898
+  #https端口
+  httpsPort: 29899
+
+#socket.io相关配置-信令服务器端口
+socketIoConfig:
+  #http端口
+  httpPort: 29998
+  #https端口
+  httpsPort: 29999
+
+#ssl证书相关存放路径
+ssl:
+  keyPath: './cert/server.key'
+  pemPath: './cert/server.pem'
+
+#一个房间内最大客户端数量
+maxSizeOfRoom: 9

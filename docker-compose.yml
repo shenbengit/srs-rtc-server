@@ -1,6 +1,6 @@
 version: "3.8"
 services:
-  srs-rtc-server:
+  srs-rtc-server1:
     #image name
     #image: shencoder/srs-rtc-server
     #直接从Dockerfile构建
@@ -12,17 +12,49 @@ services:
     #端口
     ports:
       #./config/config.yml--apiConfig.httpPort
-      - "9898:9898"
+      - "19898:19898"
       #./config/config.yml--apiConfig.httpsPort
-      - "9899:9899"
+      - "19899:19899"
       #./config/config.yml--socketIoConfig.httpPort
-      - "9998:9998"
+      - "19998:19998"
       #./config/config.yml--socketIoConfig.httpPort
-      - "9999:9999"
+      - "19999:19999"
     #挂载本地文件
     volumes:
       - ./cert:/home/public/srs-rtc-server/cert
-      - ./config:/home/public/srs-rtc-server/config
+      - ./config1:/home/public/srs-rtc-server/config
+      - ./src:/home/public/srs-rtc-server/src
+      - ./app.js:/home/public/srs-rtc-server/app.js
+      - ./package.json:/home/public/srs-rtc-server/package.json
+      - ./package-lock.json:/home/public/srs-rtc-server/package-lock.json
+      - ./yarn.lock:/home/public/srs-rtc-server/yarn.lock
+    depends_on:
+      - mysqldb
+      # - srs
+
+  srs-rtc-server2:
+    #image name
+    #image: shencoder/srs-rtc-server
+    #直接从Dockerfile构建
+    build: .
+    #自启
+    restart: always
+    #主机模式  network_mode: host 与 ports不兼容
+    # network_mode: host
+    #端口
+    ports:
+      #./config/config.yml--apiConfig.httpPort
+      - "29898:29898"
+      #./config/config.yml--apiConfig.httpsPort
+      - "29899:29899"
+      #./config/config.yml--socketIoConfig.httpPort
+      - "29998:29998"
+      #./config/config.yml--socketIoConfig.httpPort
+      - "29999:29999"
+    #挂载本地文件
+    volumes:
+      - ./cert:/home/public/srs-rtc-server/cert
+      - ./config2:/home/public/srs-rtc-server/config
       - ./src:/home/public/srs-rtc-server/src
       - ./app.js:/home/public/srs-rtc-server/app.js
       - ./package.json:/home/public/srs-rtc-server/package.json
@@ -77,18 +109,22 @@ services:
     depends_on:
       - srs
   nginx:
-    image: nginx:latest
+    # image: nginx:latest
+    image: fabiocicerchia/nginx-lua:latest
     restart: always
-    command: 
-      - nginx -c /etc/nginx.conf
     ports:
-      - 8080:8080
-      - 8081:8081
+      - "9898:9898"
+      - "9899:9899"
+      - "9998:9998"
+      - "9999:9999"
     environment:
       CANDIDATE: ${CANDIDATE}
     depends_on:
-      - srs
+      - srs-rtc-server1
+      - srs-rtc-server2
     volumes:
-      - "./nginx.conf:/etc/conf.conf"
+      - "./nginx.conf:/etc/nginx/nginx.conf"
+      - "./cert/server.pem:/etc/nginx/conf.d/cert/https.crt"
+      - "./cert/server.key:/etc/nginx/conf.d/cert/https.key"
 
 
