@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3.3"
 services:
   srs-rtc-server1:
     #image name
@@ -30,7 +30,8 @@ services:
       - ./yarn.lock:/home/public/srs-rtc-server/yarn.lock
     depends_on:
       - mysqldb
-      # - srs
+      - srs1
+      - srs2
 
   srs-rtc-server2:
     #image name
@@ -62,7 +63,8 @@ services:
       - ./yarn.lock:/home/public/srs-rtc-server/yarn.lock
     depends_on:
       - mysqldb
-      - srs
+      - srs1
+      - srs2
 
   mysqldb:
     image: mysql:5.7
@@ -80,17 +82,44 @@ services:
     volumes:
       - "./db/srs_rtc.sql:/docker-entrypoint-initdb.d/1.sql"
 
-  srs:
+  srs1:
     image: registry.cn-hangzhou.aliyuncs.com/ossrs/srs:4
     restart: always
-    command: bash -c "/usr/local/srs/objs/srs -c /usr/local/srs/conf/rtc.conf"
+    command: bash -c "/usr/local/srs/objs/srs -c /usr/local/srs/conf/origin1.conf"
     ports:
+      - 11935:11935
+      - 18080:18080
+      - 11985:11985
+      - 8001:8001/udp
+    volumes:
+      - ./srs-conf/origin1.conf:/usr/local/srs/conf/origin1.conf
+    environment:
+      CANDIDATE: ${CANDIDATE}
+
+  srs2:
+    image: registry.cn-hangzhou.aliyuncs.com/ossrs/srs:4
+    restart: always
+    command: bash -c "/usr/local/srs/objs/srs -c /usr/local/srs/conf/origin2.conf"
+    ports:
+      - 21935:21935
+      - 28080:28080
+      - 21985:21985
+      - 8002:8002/udp
+    volumes:
+      - ./srs-conf/origin2.conf:/usr/local/srs/conf/origin2.conf
+    environment:
+      CANDIDATE: ${CANDIDATE}
+
+  haproxy:
+    image: haproxy:latest
+    restart: always
+    ports:
+      - 8888:8888
       - 1935:1935
       - 8080:8080
       - 1985:1985
-      - 8000:8000/udp
-    # volumes:
-    #   - ./config/rtc.conf:/usr/local/srs/conf/rtc.conf
+    volumes:
+      - ./srs-conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
     environment:
       CANDIDATE: ${CANDIDATE}
 
@@ -107,7 +136,8 @@ services:
     environment:
       CANDIDATE: ${CANDIDATE}
     depends_on:
-      - srs
+      - srs1
+      - srs2
   nginx:
     # image: nginx:latest
     image: fabiocicerchia/nginx-lua:latest
