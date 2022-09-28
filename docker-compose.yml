@@ -110,6 +110,20 @@ services:
     environment:
       CANDIDATE: ${CANDIDATE}
 
+  # srs-edge1:
+  #   image: registry.cn-hangzhou.aliyuncs.com/ossrs/srs:4
+  #   restart: always
+  #   command: bash -c "/usr/local/srs/objs/srs -c /usr/local/srs/conf/edge1.conf"
+  #   ports:
+  #     - 1935:1935
+  #     - 8080:8080
+  #     - 1985:1985
+  #     - 8003:8003/udp
+  #   volumes:
+  #     - ./srs-conf/edge1.conf:/usr/local/srs/conf/edge1.conf
+  #   environment:
+  #     CANDIDATE: ${CANDIDATE}
+
   haproxy:
     image: haproxy:latest
     restart: always
