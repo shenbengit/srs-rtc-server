@@ -153,6 +153,79 @@ const CLIENT_NOTIFY_CMD = {
     NOTIFY_OFFLINE_DURING_CALL: "notify_offline_during_call",
 };
 
+/**
+ * 客户端P2P请求事件
+ */
+const CLIENT_P2P_REQ_CMD = {
+    /**
+     * 邀请一个人，并创建房间 ——> 单聊
+     */
+    REQ_P2P_INVITE_SOMEONE: "req_p2p_invite_someone",
+    /**
+     * 拒接通话
+     */
+    REQ_P2P_REJECT_CALL: "req_p2p_reject_call",
+    /**
+     * 接受通话
+     */
+    REQ_P2P_ACCEPT_CALL: "req_p2p_accept_call",
+    /**
+     * 发送offer
+     */
+    REQ_P2P_SEND_OFFER: "req_p2p_send_offer",
+    /**
+     * 发送answer
+     */
+    REQ_P2P_SEND_ANSWER: "req_p2p_send_answer",
+    /**
+     * 发送ice
+     */
+    REQ_P2P_SEND_ICE: "req_p2p_send_ice",
+    /**
+     * 挂断
+     */
+    REQ_P2P_HANG_UP: "req_p2p_hang_up",
+    /**
+     * 用于重置状态，避免偶发情况下未关闭通话
+     */
+    REQ_P2P_RESET_STATUS: "req_p2p_reset_status"
+}
+
+const CLIENT_P2P_NOTIFY_CMD = {
+    /**
+     * 通知请求通话
+     */
+    NOTIFY_P2P_REQUEST_CALL: "notify_p2p_request_call",
+    /**
+     * 通知拒接通话
+     */
+    NOTIFY_P2P_REJECT_CALL: "notify_p2p_reject_call",
+    /**
+     * 通知接受通话
+     */
+    NOTIFY_P2P_ACCEPT_CALL: "notify_p2p_accept_call",
+    /**
+     * 通知接收到offer
+     */
+    NOTIFY_P2P_RECEIVE_OFFER: "notify_p2p_receive_offer",
+    /**
+     * 通知接收到answer
+     */
+    NOTIFY_P2P_RECEIVE_ANSWER: "notify_p2p_receive_answer",
+    /**
+     * 通知接收到ice
+     */
+    NOTIFY_P2P_RECEIVE_ICE: "notify_p2p_receive_ice",
+    /**
+     * 通知挂断
+     */
+    NOTIFY_P2P_HANG_UP: "notify_p2p_hang_up",
+    /**
+     * 通知房间内，有人通话中掉线
+     */
+    NOTIFY_P2P_OFFLINE_DURING_CALL: "notify_p2p_offline_during_call",
+}
+
 module.exports = {
     ROOM_PREFIX,
     NAMESPACE,
@@ -162,5 +235,7 @@ module.exports = {
     ADMINISTRATORS_REQ_CMD,
     ADMINISTRATORS_NOTIFY_CMD,
     CLIENT_REQ_CMD,
-    CLIENT_NOTIFY_CMD
+    CLIENT_NOTIFY_CMD,
+    CLIENT_P2P_REQ_CMD,
+    CLIENT_P2P_NOTIFY_CMD
 }

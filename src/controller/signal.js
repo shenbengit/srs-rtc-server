@@ -7,7 +7,9 @@ const {
     ADMINISTRATORS_REQ_CMD,
     ADMINISTRATORS_NOTIFY_CMD,
     CLIENT_REQ_CMD,
-    CLIENT_NOTIFY_CMD
+    CLIENT_NOTIFY_CMD,
+    CLIENT_P2P_REQ_CMD,
+    CLIENT_P2P_NOTIFY_CMD
 } = require("../constant/signalConstant");
 
 const {Server} = require("socket.io");
@@ -143,6 +145,7 @@ clientNamespace.adapter
         console.log(`clientNamespace.adapter.delete-room->roomId:${room}`)
     });
 
+//<editor-fold desc="管理端连接事件">
 //管理端连接
 administratorNamespace.on("connection", function (socket) {
     setSocketCallStatus(socket, CALL_STATUS.IDLE)
@@ -160,7 +163,9 @@ administratorNamespace.on("connection", function (socket) {
 
         });
 });
+//</editor-fold>
 
+//<editor-fold desc="客户端连接事件">
 //客户端连接
 clientNamespace.on("connection", function (socket) {
     //通知管理终端有客户端上线
@@ -169,59 +174,6 @@ clientNamespace.on("connection", function (socket) {
     setSocketCallStatus(socket, CALL_STATUS.IDLE)
 
     socket
-        //邀请一个人，并创建房间 ——> 单聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE, (info, fn) => {
-            //info={userId:"123"}
-            clientInviteSomeone(socket, info, true, fn);
-        })
-        //邀请一些人，并创建房间 ——> 群聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE, (info, fn) => {
-            //list={userList:[{userId:"123"}]}
-            clientInviteSomePeople(socket, info, true, fn);
-        })
-        //邀请一个人进入邀请人房间——> 群聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE_JOIN_ROOM, (info, fn) => {
-            //info={userId:"123",roomId:123}
-            clientInviteSomeone(socket, info, false, fn);
-        })
-        //邀请一些人进入邀请人房间 ——> 群聊
-        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE_JOIN_ROOM, (info, fn) => {
-            //info={userList:[{userId:"123"}],roomId:123}
-            clientInviteSomePeople(socket, info, false, fn);
-        })
-        //拒接
-        .on(CLIENT_REQ_CMD.REQ_REJECT_CALL, (roomId, fn) => {
-            //roomId="123456"
-            clientRejectCall(socket, roomId, fn);
-        })
-        //同意通话
-        .on(CLIENT_REQ_CMD.REQ_ACCEPT_CALL, (roomId, fn) => {
-            //roomId="123456"
-            clientAcceptCall(socket, roomId, fn);
-        })
-        //加入房间->用于聊天室
-        .on(CLIENT_REQ_CMD.REQ_JOIN_CHAT_ROOM, (roomId, fn) => {
-            //roomId="123456"
-            clientJoinChatRoom(socket, roomId, fn);
-        })
-        //离开房间->用于聊天室
-        .on(CLIENT_REQ_CMD.REQ_LEAVE_CHAT_ROOM, (roomId, fn) => {
-            //roomId="123456"
-            clientLeaveChatRoom(socket, roomId, fn);
-        })
-        //推流
-        .on(CLIENT_REQ_CMD.REQ_PUBLISH_STREAM, (info, fn) => {
-            //info={roomId:"123", publishStreamUrl: "webrtc://192.168.1.1:1990/live/livestream"}
-            clientPublishStream(socket, info, fn);
-        })
-        //挂断
-        .on(CLIENT_REQ_CMD.REQ_HANG_UP, (roomId, fn) => {
-            //roomId="123456"
-            clientHangUp(socket, roomId, fn)
-        })
-        .on(CLIENT_REQ_CMD.REQ_RESET_STATUS, () => {
-            clientResetStatus(socket);
-        })
         //发生错误时触发
         .on("error", (error) => {
 
@@ -233,23 +185,99 @@ clientNamespace.on("connection", function (socket) {
         //断开连接时触发
         .on("disconnect", () => {
             clientDisconnect(socket)
+        })
+        /***********************************************SFU*********************************************************/
+        //邀请一个人，并创建房间 ——> 单聊
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE, (info, fn) => {
+            //info={userId:"123"}
+            clientSfuInviteSomeone(socket, info, true, fn);
+        })
+        //邀请一些人，并创建房间 ——> 群聊
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE, (info, fn) => {
+            //list={userList:[{userId:"123"}]}
+            clientSfuInviteSomePeople(socket, info, true, fn);
+        })
+        //邀请一个人进入邀请人房间——> 群聊
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOMEONE_JOIN_ROOM, (info, fn) => {
+            //info={userId:"123",roomId:123}
+            clientSfuInviteSomeone(socket, info, false, fn);
+        })
+        //邀请一些人进入邀请人房间 ——> 群聊
+        .on(CLIENT_REQ_CMD.REQ_INVITE_SOME_PEOPLE_JOIN_ROOM, (info, fn) => {
+            //info={userList:[{userId:"123"}],roomId:123}
+            clientSfuInviteSomePeople(socket, info, false, fn);
+        })
+        //拒接
+        .on(CLIENT_REQ_CMD.REQ_REJECT_CALL, (roomId, fn) => {
+            //roomId="123456"
+            clientSfuRejectCall(socket, roomId, fn);
+        })
+        //同意通话
+        .on(CLIENT_REQ_CMD.REQ_ACCEPT_CALL, (roomId, fn) => {
+            //roomId="123456"
+            clientSfuAcceptCall(socket, roomId, fn);
+        })
+        //加入房间->用于聊天室
+        .on(CLIENT_REQ_CMD.REQ_JOIN_CHAT_ROOM, (roomId, fn) => {
+            //roomId="123456"
+            clientSfuJoinChatRoom(socket, roomId, fn);
+        })
+        //离开房间->用于聊天室
+        .on(CLIENT_REQ_CMD.REQ_LEAVE_CHAT_ROOM, (roomId, fn) => {
+            //roomId="123456"
+            clientSfuLeaveChatRoom(socket, roomId, fn);
+        })
+        //推流
+        .on(CLIENT_REQ_CMD.REQ_PUBLISH_STREAM, (info, fn) => {
+            //info={roomId:"123", publishStreamUrl: "webrtc://192.168.1.1:1990/live/livestream"}
+            clientSfuPublishStream(socket, info, fn);
+        })
+        //挂断
+        .on(CLIENT_REQ_CMD.REQ_HANG_UP, (roomId, fn) => {
+            //roomId="123456"
+            clientSfuHangUp(socket, roomId, fn)
+        })
+        .on(CLIENT_REQ_CMD.REQ_RESET_STATUS, () => {
+            clientResetStatus(socket);
+        })
+        /***********************************************MESH(P2P)*********************************************************/
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_INVITE_SOMEONE, (info, fn) => {
+            //info={userId:"123", "callType"=1}
+            //callType: 1:视频通话，2:音频通话
+            clientP2PInviteSomeone(socket, info, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_REJECT_CALL, (roomId, fn) => {
+            //roomId="123456"
+            clientP2PRejectCall(socket, roomId, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_ACCEPT_CALL, (roomId, fn) => {
+            //roomId="123456"
+            clientP2PAcceptCall(socket, roomId, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_SEND_OFFER, (roomId, sdp, fn) => {
+            //roomId="123456", description="sdp"
+            clientP2PSendOffer(socket, roomId, sdp, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_SEND_ANSWER, (roomId, sdp, fn) => {
+            //roomId="123456", description="sdp"
+            clientP2PSendAnswer(socket, roomId, sdp, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_SEND_ICE, (roomId, ice, fn) => {
+            //roomId="123456", ice={sdpMid:"", sdpMLineIndex:1, sdp:""}
+            clientP2PSendIce(socket, roomId, ice, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_HANG_UP, (roomId, fn) => {
+            //roomId="123456"
+            clientP2PHangUp(socket, roomId, fn)
+        })
+        .on(CLIENT_P2P_REQ_CMD.REQ_P2P_RESET_STATUS, () => {
+            clientResetStatus(socket);
         });
 });
 
-/**
- * 根据用户信息获取socket
- */
-function getSocketByUserInfo(namespace, userInfo) {
-    for (const socket of namespace.sockets.values()) {
-        const info = socket.userInfo;
-        if (userInfo && info) {
-            if (userInfo.userId === info.userId && userInfo.userType === info.userType) {
-                return socket;
-            }
-        }
-    }
-    return undefined;
-}
+//</editor-fold>
+
+//<editor-fold desc="SFU">
 
 /**
  * 客户端邀请某人
@@ -258,7 +286,7 @@ function getSocketByUserInfo(namespace, userInfo) {
  * @param needCreateRoom 是否需要创建房间，如果为false，则指定为当前邀请人的房间号
  * @param fn
  */
-function clientInviteSomeone(inviteSocket, info, needCreateRoom, fn) {
+function clientSfuInviteSomeone(inviteSocket, info, needCreateRoom, fn) {
     let roomId;
     if (needCreateRoom) {
         roomId = generateRoomId();
@@ -337,7 +365,7 @@ function clientInviteSomeone(inviteSocket, info, needCreateRoom, fn) {
  * @param needCreateRoom 是否需要创建房间，如果为false，则指定为当前邀请人的房间号
  * @param fn
  */
-function clientInviteSomePeople(inviteSocket, info, needCreateRoom, fn) {
+function clientSfuInviteSomePeople(inviteSocket, info, needCreateRoom, fn) {
     let roomId;
     if (needCreateRoom) {
         roomId = generateRoomId();
@@ -457,49 +485,12 @@ function clientInviteSomePeople(inviteSocket, info, needCreateRoom, fn) {
 }
 
 /**
- * 客户端加入房间
- * @param socket
- * @param roomId
- * @returns {boolean} true：加入成功，false：加入失败
- */
-function clientJoinRoom(socket, roomId) {
-    if (!isSocketIdle(socket)) {
-        //当前状态忙碌
-        return false;
-    }
-    if (isSocketInRoom(socket, roomId)) {
-        //已经在会见室
-        return false;
-    }
-    if (canRoomAddSocket(clientNamespace, roomId)) {
-        socket.join(roomId);
-        setSocketCallStatus(socket, CALL_STATUS.DIALING);
-        return true;
-    }
-    return false;
-}
-
-/**
- * 客户端离开房间
- * @param socket
- * @param roomId
- */
-function clientLeaveRoom(socket, roomId) {
-    if (isSocketInRoom(socket, roomId)) {
-        socket.leave(roomId);
-        setSocketCallStatus(socket, CALL_STATUS.IDLE);
-        return true;
-    }
-    return false;
-}
-
-/**
  * 客户端拒接
  * @param socket
  * @param roomId
  * @param fn
  */
-function clientRejectCall(socket, roomId, fn) {
+function clientSfuRejectCall(socket, roomId, fn) {
     if (!roomId) {
         fn(new ErrorModel(0, "roomId is null."));
         return
@@ -534,7 +525,7 @@ function clientRejectCall(socket, roomId, fn) {
  * @param roomId
  * @param fn
  */
-function clientAcceptCall(socket, roomId, fn) {
+function clientSfuAcceptCall(socket, roomId, fn) {
     if (!roomId) {
         fn(new ErrorModel(0, "roomId is null."));
         return
@@ -563,7 +554,7 @@ function clientAcceptCall(socket, roomId, fn) {
  * @param roomId
  * @param fn
  */
-function clientJoinChatRoom(socket, roomId, fn) {
+function clientSfuJoinChatRoom(socket, roomId, fn) {
     if (!roomId) {
         fn(new ErrorModel(0, "roomId is null."));
         return
@@ -603,7 +594,7 @@ function clientJoinChatRoom(socket, roomId, fn) {
  * @param roomId
  * @param fn
  */
-function clientLeaveChatRoom(socket, roomId, fn) {
+function clientSfuLeaveChatRoom(socket, roomId, fn) {
     if (!roomId) {
         fn(new ErrorModel(0, "roomId is null."));
         return
@@ -623,7 +614,7 @@ function clientLeaveChatRoom(socket, roomId, fn) {
  * @param info
  * @param fn
  */
-function clientPublishStream(socket, info, fn) {
+function clientSfuPublishStream(socket, info, fn) {
     const roomId = info.roomId;
     if (!roomId) {
         fn(new ErrorModel(0, "roomId is null."));
@@ -654,7 +645,7 @@ function clientPublishStream(socket, info, fn) {
  * @param roomId
  * @param fn
  */
-function clientHangUp(socket, roomId, fn) {
+function clientSfuHangUp(socket, roomId, fn) {
     if (!roomId) {
         fn(new ErrorModel(0, "roomId is null."));
         return
@@ -683,21 +674,269 @@ function clientHangUp(socket, roomId, fn) {
     }
 }
 
+//</editor-fold>
+
+
+//<editor-fold desc="P2P">
+
 /**
- * 重置客户端状态
- * @param socket
+ * P2P 客户端邀请某人
+ * @param inviteSocket
+ * @param info
+ * @param fn
  */
-function clientResetStatus(socket) {
-    if (!isSocketIdle(socket)) {
-        const roomId = getSocketCallRoom(socket);
-        if (roomId) {
-            if (socket.isChatRoomMode) {
-                clientLeaveChatRoom(socket, roomId, empty);
+function clientP2PInviteSomeone(inviteSocket, info, fn) {
+    //先判断本身是否是空闲状态
+    if (isSocketIdle(inviteSocket)) {
+        let roomId = generateRoomId();
+        //设置用户类型
+        info.userType = USER_TYPE_CLIENT;
+        const inviteeClient = getSocketByUserInfo(clientNamespace, info);
+        //先判断被邀请人是否在线
+        if (inviteeClient) {
+            //在线，判断是否是空闲状态
+            if (isSocketIdle(inviteeClient)) {
+                let success = clientJoinRoom(inviteSocket, roomId);
+                if (!success) {
+                    //加入房间失败
+                    fn(new ErrorModel(0, "invite join room failed: exceeded maximum quantity limit."));
+                    return
+                }
+
+                setSocketP2PMode(inviteSocket, true)
+
+                //将受邀者直接进入房间
+                success = clientJoinRoom(inviteeClient, roomId);
+                if (!success) {
+                    //受邀人没有加入房间，自己也离开房间
+                    clientLeaveRoom(inviteSocket, roomId);
+
+                    fn(new ErrorModel(0, "invitee join room failed: exceeded maximum quantity limit."));
+                    return
+                }
+
+                setSocketP2PMode(inviteeClient, true)
+
+                //通知被邀请者，推送请求通话
+                inviteeClient.emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_REQUEST_CALL, {
+                    inviteInfo: inviteSocket.userInfo, roomId: roomId, /*1:视频通话，2:音频通话*/callType: info.callType
+                });
+                fn(new SuccessModel({inviteeInfo: inviteeClient.userInfo, roomId: roomId}));
             } else {
-                clientHangUp(socket, roomId, empty)
+                if (isSocketInRoom(inviteeClient, roomId)) {
+                    fn(new ErrorModel(0, "the invitee is already in the room."));
+                    return;
+                }
+                //被邀请人忙碌
+                fn(new ErrorModel(0, "the invitee is busy."));
+            }
+        } else {
+            //被邀请人离线或不存在
+            fn(new ErrorModel(0, "the invitee is offline or doesn't exist."));
+        }
+    } else {
+        fn(new ErrorModel(0, "you are busy."));
+    }
+}
+
+
+/**
+ * P2P 客户端拒接
+ * @param socket
+ * @param roomId
+ * @param fn
+ */
+function clientP2PRejectCall(socket, roomId, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (clientLeaveRoom(socket, roomId)) {
+        fn(new SuccessModel());
+
+        const socketIds = getRoomSocketIds(clientNamespace, roomId);
+        if (!socketIds.length) {
+            //房间里没人了
+            return;
+        }
+        //房间内剩余客户端数量为1，则直接关闭会话
+        const needCallEnded = socketIds.length === 1;
+        //推送拒接通知
+        socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_REJECT_CALL, {
+            userInfo: socket.userInfo, roomId: roomId, /*是否需要结束通话*/callEnded: needCallEnded
+        });
+        if (needCallEnded) {
+            const client = clientNamespace.sockets.get(socketIds[0]);
+            //结束通话
+            clientLeaveRoom(client, roomId);
+        }
+    } else {
+        fn(new ErrorModel(0, "client reject call failed: you are not in the room."));
+    }
+}
+
+/**
+ * P2P 接受通话
+ * @param socket
+ * @param roomId
+ * @param fn
+ */
+function clientP2PAcceptCall(socket, roomId, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (isSocketInRoom(socket, roomId)) {
+        const socketIds = getRoomSocketIds(clientNamespace, roomId);
+        if (socketIds.length === 1) {
+            //如果数量为1，说明就只有自己
+            clientLeaveRoom(socket, roomId);
+            fn(new ErrorModel(-1, "call room doesn't exist."));
+            return;
+        }
+        socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_ACCEPT_CALL, {
+            userInfo: socket.userInfo,
+            roomId: roomId
+        });
+        fn(new SuccessModel({
+            alreadyInRoomList: getAllSocketInfoExcept(clientNamespace, roomId, socket),
+            roomId: roomId
+        }));
+    } else {
+        fn(new ErrorModel(0, "client accept call failed: you are not in the room."));
+    }
+}
+
+/**
+ * P2P 客服端发送 Offer Sdp
+ * @param socket
+ * @param roomId
+ * @param sdp
+ * @param fn
+ */
+function clientP2PSendOffer(socket, roomId, sdp, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (!sdp) {
+        fn(new ErrorModel(0, "offer sdp is null."));
+        return
+    }
+    if (isSocketInRoom(socket, roomId)) {
+        socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_RECEIVE_OFFER, {
+            userInfo: socket.userInfo, sdp: sdp, roomId: roomId
+        });
+        fn(new SuccessModel());
+    } else {
+        fn(new ErrorModel(0, "client send offer failed: you are not in the room."));
+    }
+}
+
+/**
+ * P2P 客服端发送 Answer Sdp
+ * @param socket
+ * @param roomId
+ * @param sdp
+ * @param fn
+ */
+function clientP2PSendAnswer(socket, roomId, sdp, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (!sdp) {
+        fn(new ErrorModel(0, "offer sdp is null."));
+        return
+    }
+    if (isSocketInRoom(socket, roomId)) {
+        socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_RECEIVE_ANSWER, {
+            userInfo: socket.userInfo, sdp: sdp, roomId: roomId
+        });
+        fn(new SuccessModel());
+    } else {
+        fn(new ErrorModel(0, "client send answer failed: you are not in the room."));
+    }
+}
+
+/**
+ * P2P 客服端发送 Ice
+ * @param socket
+ * @param roomId
+ * @param ice
+ * @param fn
+ */
+function clientP2PSendIce(socket, roomId, ice, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (!ice) {
+        fn(new ErrorModel(0, "ice is null."));
+        return
+    }
+    if (isSocketInRoom(socket, roomId)) {
+        socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_RECEIVE_ICE, {
+            userInfo: socket.userInfo, ice: ice, roomId: roomId
+        });
+        fn(new SuccessModel());
+    } else {
+        fn(new ErrorModel(0, "client send ice failed: you are not in the room."));
+    }
+}
+
+/**
+ * P2P 客户端挂断
+ * @param socket
+ * @param roomId
+ * @param fn
+ */
+function clientP2PHangUp(socket, roomId, fn) {
+    if (!roomId) {
+        fn(new ErrorModel(0, "roomId is null."));
+        return
+    }
+    if (clientLeaveRoom(socket, roomId)) {
+        fn(new SuccessModel());
+
+        const socketIds = getRoomSocketIds(clientNamespace, roomId);
+        if (!socketIds.length) {
+            //房间里没人了
+            return;
+        }
+        //房间内剩余客户端数量为1，则直接关闭会话
+        const needCallEnded = socketIds.length === 1;
+        //推送挂断通知
+        socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_HANG_UP, {
+            userInfo: socket.userInfo, roomId: roomId, /*是否需要结束通话*/callEnded: needCallEnded
+        });
+        if (needCallEnded) {
+            const client = clientNamespace.sockets.get(socketIds[0]);
+            //结束通话
+            clientLeaveRoom(client, roomId);
+        }
+    } else {
+        fn(new ErrorModel(0, "client hang up failed: you are not in the room."));
+    }
+}
+
+//</editor-fold>
+
+
+//<editor-fold desc="公共方法">
+/**
+ * 根据用户信息获取socket
+ */
+function getSocketByUserInfo(namespace, userInfo) {
+    for (const socket of namespace.sockets.values()) {
+        const info = socket.userInfo;
+        if (userInfo && info) {
+            if (userInfo.userId === info.userId && userInfo.userType === info.userType) {
+                return socket;
             }
         }
     }
+    return undefined;
 }
 
 /**
@@ -710,7 +949,28 @@ function clientDisconnecting(socket, reason) {
     if (!isSocketIdle(socket)) {
         const roomId = getSocketCallRoom(socket);
         if (roomId) {
-            if (socket.isChatRoomMode) {
+            if (socket.isP2PMode) {
+                const socketIds = getRoomSocketIds(clientNamespace, roomId);
+                const otherSocketIds = socketIds.filter(value => value !== socket.id);
+                //房间内其他人数量小于等于1时
+                const needCallEnded = otherSocketIds.length <= 1;
+                //通知房间内其他人，有人离开离线
+                socket.to(roomId).emit(CLIENT_P2P_NOTIFY_CMD.NOTIFY_P2P_OFFLINE_DURING_CALL, {
+                        userInfo: socket.userInfo,
+                        reason: reason,
+                        roomId: roomId,
+                        /*是否需要结束通话*/callEnded: needCallEnded
+                    }
+                );
+                if (needCallEnded) {
+                    if (otherSocketIds.length === 1) {
+                        //让剩下的那一个socket离开房间
+                        const client = clientNamespace.sockets.get(otherSocketIds[0]);
+                        //结束通话
+                        clientLeaveRoom(client, roomId);
+                    }
+                }
+            } else if (socket.isChatRoomMode) {
                 //聊天室模式，直接通知有人离开聊天室
                 socket.to(roomId).emit(CLIENT_NOTIFY_CMD.NOTIFY_LEAVE_CHAT_ROOM, {
                     userInfo: socket.userInfo,
@@ -754,6 +1014,62 @@ function clientDisconnect(socket) {
 }
 
 /**
+ * 重置客户端状态
+ * @param socket
+ */
+function clientResetStatus(socket) {
+    if (!isSocketIdle(socket)) {
+        const roomId = getSocketCallRoom(socket);
+        if (roomId) {
+            if (socket.isP2PMode) {
+                clientP2PHangUp(socket, roomId, empty)
+            } else if (socket.isChatRoomMode) {
+                clientSfuLeaveChatRoom(socket, roomId, empty);
+            } else {
+                clientSfuHangUp(socket, roomId, empty)
+            }
+        }
+    }
+}
+
+/**
+ * 客户端加入房间
+ * @param socket
+ * @param roomId
+ * @returns {boolean} true：加入成功，false：加入失败
+ */
+function clientJoinRoom(socket, roomId) {
+    if (!isSocketIdle(socket)) {
+        //当前状态忙碌
+        return false;
+    }
+    if (isSocketInRoom(socket, roomId)) {
+        //已经在房间了
+        return false;
+    }
+    if (canRoomAddSocket(clientNamespace, roomId)) {
+        socket.join(roomId);
+        setSocketCallStatus(socket, CALL_STATUS.DIALING);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * 客户端离开房间
+ * @param socket
+ * @param roomId
+ */
+function clientLeaveRoom(socket, roomId) {
+    if (isSocketInRoom(socket, roomId)) {
+        socket.leave(roomId);
+        setSocketCallStatus(socket, CALL_STATUS.IDLE);
+        return true;
+    }
+    return false;
+}
+
+/**
  * 判断客户端是否在指定房间内
  * @param socket
  * @param roomId
@@ -786,7 +1102,8 @@ const isSocketIdle = (socket) => {
 const setSocketCallStatus = (socket, status) => {
     if (status === CALL_STATUS.IDLE) {
         setSocketPublishStreamUrl(socket, undefined);
-        setSocketChatRoomMode(false)
+        setSocketChatRoomMode(socket, false)
+        setSocketP2PMode(socket, false)
     }
     socket.callStatus = status;
 }
@@ -813,6 +1130,16 @@ const setSocketPublishStreamUrl = (socket, streamUrl) => {
 const setSocketChatRoomMode = (socket, isChatRoomMode) => {
     //当前客户端聊天室模式
     socket.isChatRoomMode = isChatRoomMode;
+}
+
+/**
+ * 设置socket当前聊天方式是否是P2P
+ * @param socket
+ * @param isP2PMode
+ */
+const setSocketP2PMode = (socket, isP2PMode) => {
+    //当前客户端P2P模式
+    socket.isP2PMode = isP2PMode;
 }
 
 /**
@@ -924,6 +1251,8 @@ function getAllRoom(namespace, excludeSocket) {
  */
 function empty(result) {
 }
+
+//</editor-fold>
 
 /**
  * 启动api服务
