@@ -1,5 +1,5 @@
-const HEADER_USER_TYPE = "user-type"
-const HEADER_USER_ID = "user-id"
+const HEADER_USER_TYPE = "user-type";
+const HEADER_USER_ID = "user-id";
 
 const fs = require("fs");
 const morgan = require('morgan');
@@ -18,13 +18,13 @@ const allowCors = function (req, res, next) {
 };
 //格式化本地时间
 morgan.token('localDate', function getDate() {
-    return new Date().toString()
-})
-morgan.format("common", ":remote-addr - :remote-user [:localDate] \":method :url HTTP/:http-version\" :status :res[content-length]")
+    return new Date().toString();
+});
+morgan.format("common", ":remote-addr - :remote-user [:localDate] \":method :url HTTP/:http-version\" :status :res[content-length]");
 //日志打印
 app.use(morgan('common'));
 //跨域
-app.use(allowCors)
+app.use(allowCors);
 //添加对post请求Body参数的解析
 app.use(Express.json());
 app.use(Express.urlencoded({extended: false}));
@@ -50,6 +50,7 @@ const {
     HeaderMissingErrorModel,
     DBErrorModel
 } = require('../model/responseModel');
+const {getOnlineClients} = require("./signal");
 
 //读取参数配置文件
 const config = require('../config/config').parseConfig;
@@ -71,7 +72,7 @@ app.get(USER_PATH.GET_ALL_USER_INFO, function (req, res) {
     if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
         if (userType === USER_TYPE_ADMINISTRATOR) {
             //如果是管理员账户，还需要用户id
-            const userId = req.header(HEADER_USER_ID)
+            const userId = req.header(HEADER_USER_ID);
             if (userId) {
                 //判断用户id真实性
                 getUserInfo(userId, userType).then(result => {
@@ -94,7 +95,7 @@ app.get(USER_PATH.GET_ALL_USER_INFO, function (req, res) {
             } else {
                 res.status(400).json(new HeaderMissingErrorModel(HEADER_USER_ID));
             }
-            return
+            return;
         }
         //仅查询客户端信息
         getAllUser(userType).then(result => {
@@ -116,7 +117,7 @@ app.post(USER_PATH.CHECK_USER_ID, function (req, res) {
 
     if (!userType) {
         res.status(400).json(new BodyMissingErrorModel("userType"));
-        return
+        return;
     }
     if (!userId) {
         res.status(400).json(new BodyMissingErrorModel("userId"));
@@ -138,7 +139,7 @@ app.post(USER_PATH.CHECK_USER_ID, function (req, res) {
         //用户类型错误
         res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
-})
+});
 
 //根据userId获取用户信息
 app.get(USER_PATH.GET_USER_INFO, function (req, res) {
@@ -146,11 +147,11 @@ app.get(USER_PATH.GET_USER_INFO, function (req, res) {
     let userType = req.query.userType;
     if (!userId) {
         res.status(400).json(new ParamMissingErrorModel("userId"));
-        return
+        return;
     }
     if (!userType) {
         res.status(400).json(new ParamMissingErrorModel("userType"));
-        return
+        return;
     }
     userType = userType.toString();
     if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
@@ -174,7 +175,7 @@ app.get(USER_PATH.GET_USER_INFO, function (req, res) {
         //用户类型错误
         res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
-})
+});
 
 //注册用户
 app.post(USER_PATH.INSERT_USER, function (req, res) {
@@ -204,7 +205,7 @@ app.post(USER_PATH.INSERT_USER, function (req, res) {
     } else {
         res.status(400).json(new BodyMissingErrorModel("userId,username,password,userType"));
     }
-})
+});
 
 //更新用户信息，字段存在则更新，不存在则不处理
 app.post(USER_PATH.UPDATE_USER, function (req, res) {
@@ -214,11 +215,11 @@ app.post(USER_PATH.UPDATE_USER, function (req, res) {
     let userType = req.body.userType;
     if (!userId) {
         res.status(400).json(new ParamMissingErrorModel("userId"));
-        return
+        return;
     }
     if (!userType) {
         res.status(400).json(new ParamMissingErrorModel("userType"));
-        return
+        return;
     }
     userType = userType.toString();
     if (username || password) {
@@ -241,7 +242,7 @@ app.post(USER_PATH.UPDATE_USER, function (req, res) {
     } else {
         res.status(400).json(new BodyMissingErrorModel("username OR password"));
     }
-})
+});
 
 //用户登录
 app.post(USER_PATH.USER_LOGIN, function (req, res) {
@@ -250,15 +251,15 @@ app.post(USER_PATH.USER_LOGIN, function (req, res) {
     let userType = req.body.userType;
     if (!userId) {
         res.status(400).json(new ParamMissingErrorModel("userId"));
-        return
+        return;
     }
     if (!password) {
         res.status(400).json(new ParamMissingErrorModel("password"));
-        return
+        return;
     }
     if (!userType) {
         res.status(400).json(new ParamMissingErrorModel("userType"));
-        return
+        return;
     }
     userType = userType.toString();
     if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
@@ -282,23 +283,23 @@ app.post(USER_PATH.USER_LOGIN, function (req, res) {
         //用户类型错误
         res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
-})
+});
 //删除用户
 app.post(USER_PATH.DELETE_USER, function (req, res) {
     const userId = req.body.userId;
     let userType = req.body.userType;
     if (!userId) {
         res.status(400).json(new ParamMissingErrorModel("userId"));
-        return
+        return;
     }
     if (!userType) {
         res.status(400).json(new ParamMissingErrorModel("userType"));
-        return
+        return;
     }
     userType = userType.toString();
     if (userType === USER_TYPE_CLIENT || userType === USER_TYPE_ADMINISTRATOR) {
         deleteUser(userId, userType).then(result => {
-            console.log("delete： ",result)
+            console.log("delete: ", result);
             if (result.affectedRows) {
                 res.json(new SuccessModel());
             } else {
@@ -312,7 +313,12 @@ app.post(USER_PATH.DELETE_USER, function (req, res) {
         //用户类型错误
         res.json(new ErrorModel(0, `userType :[${userType}] is wrong, must be one of [${USER_TYPE_CLIENT}, ${USER_TYPE_ADMINISTRATOR}].`));
     }
-})
+});
+
+app.get(USER_PATH.GET_ALL_ONLINE_USERS, function (req, res) {
+    let list = getOnlineClients();
+    res.json(new SuccessModel(list));
+});
 
 /**
  * 启动api服务
@@ -328,4 +334,4 @@ function startApiServer() {
 
 module.exports = {
     startApiServer
-}
+};

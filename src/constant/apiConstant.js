@@ -12,7 +12,7 @@ const USER_PATH = {
         user-id : xxx
      }
      response:
-     {"code": 1,"msg": "success","data": [{"id": 13,"userId": "123456","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}]}
+     {"code":200,"msg": "success","data": [{"id": 13,"userId": "123456","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}]}
      */
     GET_ALL_USER_INFO: BASE_PATH + "/user/getAllUserInfo",
     /*
@@ -22,7 +22,7 @@ const USER_PATH = {
      body:
      {"userId":"123","userType":"1"}
      response:
-     {"code":1,"msg":"success"}
+     {"code":200,"msg":"success"}
      */
     CHECK_USER_ID: BASE_PATH + "/user/checkUserId",
     /*
@@ -30,7 +30,7 @@ const USER_PATH = {
      GET:
      /srs_rtc/user/getUserInfo?userId=xxx&&userType=xxx
      response:
-     {"code":1,"msg":"success","data":{"id": 13,"userId": "123456","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}}
+     {"code":200,"msg":"success","data":{"id": 13,"userId": "123456","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}}
      */
     GET_USER_INFO: BASE_PATH + "/user/getUserInfo",
     /*
@@ -40,7 +40,7 @@ const USER_PATH = {
      body:
      {"userId":"123","userType":"1","username":"张三","password":"123456"}
      response:
-     {"code":1,"msg":"success"}
+     {"code":200,"msg":"success"}
      */
     INSERT_USER: BASE_PATH + "/user/insertUser",
     /*
@@ -50,7 +50,7 @@ const USER_PATH = {
      body:
      {"userId":"123","userType":"1","username":"张三","password":"123456"}
      response:
-     {"code":1,"msg":"success"}
+     {"code":200,"msg":"success"}
      */
     UPDATE_USER: BASE_PATH + "/user/updateUser",
     /*
@@ -60,7 +60,7 @@ const USER_PATH = {
      body:
      {"userId":"123","userType":"0","password":"123456"}
      response:
-     {"code":1,"msg":"success","data":{"id": 13,"userId": "123","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}}
+     {"code":200,"msg":"success","data":{"id": 13,"userId": "123","username": "77","userType": 0,"createdAt": "2022-01-08 15:06:14"}}
      */
     USER_LOGIN: BASE_PATH + "/user/userLogin",
     /*
@@ -70,11 +70,19 @@ const USER_PATH = {
      body:
      {"userId":"123","userType":"0"}
      response:
-     {"code":1,"msg":"success"}
+     {"code":200,"msg":"success"}
      */
     DELETE_USER: BASE_PATH + "/user/deleteUser",
+    /*
+     获取当前在线人数
+     GET
+     /srs_rtc/client/getOnlineUsers
+     response:
+     {"code":200,"msg":"success","data":[{"id":4,"userId":"test","userType":"0","username":"张三","createdAt":"2022-01-19 10:36:40"}]}
+     */
+    GET_ALL_ONLINE_USERS: BASE_PATH + "/client/getAllOnlineUsers"
 };
 
 module.exports = {
     USER_PATH
-}
+};

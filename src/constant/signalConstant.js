@@ -105,7 +105,11 @@ const CLIENT_REQ_CMD = {
     /**
      * 用于重置状态，避免偶发情况下未关闭通话
      */
-    REQ_RESET_STATUS: "req_reset_status"
+    REQ_RESET_STATUS: "req_reset_status",
+    /**
+     * 获取当前连接的所有客户端
+     */
+    REQ_GET_ALL_ONLINE_CLIENTS: "req_get_all_online_clients",
 };
 /**
  * 客户端通知事件
