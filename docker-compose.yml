@@ -1,25 +1,74 @@
-version: "3.8"
 services:
+  # MySQL 数据库服务，首次启动会自动导入 db/srs_rtc.sql。
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    # 兼容 mysql npm 包的认证方式，并统一默认字符集。
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-srs_rtc}
+      MYSQL_USER: ${MYSQL_USER:-srs_rtc}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-123456}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      # 持久化数据库数据，避免容器重建后数据丢失。
+      - mysql-data:/var/lib/mysql
+      # 空数据目录初始化时，MySQL 官方镜像会自动执行该 SQL。
+      - ./db/srs_rtc.sql:/docker-entrypoint-initdb.d/01-srs_rtc.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # SRS 流媒体服务，提供 RTMP、HTTP API 和 WebRTC 推拉流。
+  srs:
+    image: ossrs/srs:6
+    restart: unless-stopped
+    command: ./objs/srs -c conf/srs.conf
+    environment:
+      # WebRTC 返回给客户端的候选 IP，局域网或公网部署时改成宿主机可访问 IP。
+      CANDIDATE: ${SRS_CANDIDATE:-127.0.0.1}
+    ports:
+      - "${SRS_RTMP_PORT:-1935}:1935"
+      - "${SRS_HTTP_API_PORT:-1985}:1985"
+      - "${SRS_HTTP_SERVER_PORT:-8080}:8080"
+      # WebRTC 默认使用 UDP，同时暴露 TCP 作为弱 UDP 网络下的兜底。
+      - "${SRS_RTC_PORT:-8000}:8000/udp"
+      - "${SRS_RTC_PORT:-8000}:8000/tcp"
+    volumes:
+      # 挂载 SRS 配置文件，修改宿主机文件后重启 srs 服务即可生效。
+      - ./srs/srs.conf:/usr/local/srs/conf/srs.conf:ro
+
   srs-rtc-server:
-    #image name
-    #image: shencoder/srs-rtc-server
-    #直接从Dockerfile构建
-    build: .
-    #自启
-    restart: always
-    #主机模式  network_mode: host 与 ports不兼容
-    network_mode: host
-    #端口
-    #ports:
-      #./config/config.yml--apiConfig.httpPort
-      #- "9898:9898"
-      #./config/config.yml--apiConfig.httpsPort
-      #- "9899:9899"
-      #./config/config.yml--socketIoConfig.httpPort
-      #- "9998:9998"
-      #./config/config.yml--socketIoConfig.httpPort
-      #- "9999:9999"
-    #挂载本地文件
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      # Docker 网络内通过服务名访问 MySQL，避免容器内 localhost 指向自身。
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-srs_rtc}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-srs_rtc}
+    depends_on:
+      # 等 MySQL 初始化并通过健康检查后再启动信令服务。
+      mysql:
+        condition: service_healthy
+      srs:
+        condition: service_started
+    ports:
+      - "${API_HTTP_PORT:-9898}:9898"
+      - "${API_HTTPS_PORT:-9899}:9899"
+      - "${SIGNAL_HTTP_PORT:-9998}:9998"
+      - "${SIGNAL_HTTPS_PORT:-9999}:9999"
     volumes:
       - ./cert:/home/public/srs-rtc-server/cert
       - ./config:/home/public/srs-rtc-server/config
@@ -28,3 +77,6 @@ services:
       - ./package.json:/home/public/srs-rtc-server/package.json
       - ./package-lock.json:/home/public/srs-rtc-server/package-lock.json
       - ./yarn.lock:/home/public/srs-rtc-server/yarn.lock
+
+volumes:
+  mysql-data:

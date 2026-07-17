@@ -52,8 +52,8 @@
 ## Getting Started
 
 ### 运行环境
-- 安装**MySQL**（必须安装）
-- 安装**Node.js**（如果运行方式使用的是Docker，则可不装）
+- Docker 方式只需安装 **Docker Desktop / Docker Compose**，MySQL、SRS 和 Node.js 均由容器提供。
+- 本地运行方式仍需安装 **MySQL** 和 **Node.js**。
 
 ### 配置Mysql
 将[srs_rtc.sql](https://github.com/shenbengit/srs-rtc-server/blob/master/db/srs_rtc.sql)导入MySQL中。
@@ -79,15 +79,33 @@ yarn
 yarn start
 ```
 #### Docker
-1. 安装**docker-compose**.
-2. 如果[config.yml](https://github.com/shenbengit/srs-rtc-server/blob/master/config/config.yml)中端口有调整，请同步调整[Dockerfile](https://github.com/shenbengit/srs-rtc-server/blob/master/Dockerfile)中对应的端口。
-
-
 ```shell
 cd srs-rtc-server
 
-docker-compose up -d
+docker compose up -d --build
 ```
+
+Compose 会自动启动并连接以下服务：
+
+- `mysql`：首次启动时自动创建 `srs_rtc` 数据库并导入 `db/srs_rtc.sql`。
+- `srs`：启用 RTMP、HTTP API、HTTP Server，以及 WebRTC UDP/TCP 推拉流。
+- `srs-rtc-server`：信令与 API 服务，通过容器服务名连接 MySQL。
+
+SRS 配置文件位于 `srs/srs.conf`，已挂载到容器内，可直接在宿主机修改后重启 SRS：
+
+```shell
+docker compose restart srs
+```
+
+WebRTC 必须向客户端返回可访问的宿主机 IP。局域网或公网访问时，请通过环境变量设置该 IP：
+
+```shell
+$env:SRS_CANDIDATE="192.168.1.100"
+docker compose up -d --build
+```
+
+默认端口：MySQL `3306`、SRS RTMP `1935`、HTTP API/WHIP/WHEP `1985`、HTTP Server `8080`、WebRTC `8000/udp` 和 `8000/tcp`。所有端口和数据库账号均可通过 `docker-compose.yml` 中对应的环境变量覆盖。
+
 ### 查看服务是否启动成功
 ```shell
 .\srs-rtc-server> yarn start
